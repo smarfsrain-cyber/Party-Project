@@ -202,7 +202,7 @@ async function init(){
   }
 }
 
-function render(e){
+async function render(e){
   const t=TYPES[e.type]||TYPES.wedding;
   document.body.className=t.cls;
   document.title=e.name+' — LễTiệc';
