@@ -246,12 +246,17 @@ let currentEvent=null;
 async function init(){
   const params=new URLSearchParams(window.location.search);
   const eventId=params.get('event');
-  if(!eventId){showError();return;}
+  if(!eventId){showError('Không có event ID trong URL.');return;}
 
-  const{data,error}=await sb.from('events').select('*').eq('id',eventId).single();
-  if(error||!data){showError();return;}
-  currentEvent=data;
-  renderEvent(data);
+  try {
+    const{data,error}=await sb.from('events').select('*').eq('id',eventId).single();
+    if(error){showError('Supabase error: '+error.message+' | code: '+error.code);return;}
+    if(!data){showError('Không tìm thấy sự kiện với ID: '+eventId);return;}
+    currentEvent=data;
+    renderEvent(data);
+  } catch(e){
+    showError('Exception: '+e.message);
+  }
 }
 
 function renderEvent(ev){
@@ -284,12 +289,15 @@ function renderEvent(ev){
   }
 
   document.getElementById('loading-state').classList.add('hidden');
+  document.getElementById('error-state').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
 }
 
-function showError(){
+function showError(msg){
   document.getElementById('loading-state').classList.add('hidden');
-  document.getElementById('error-state').classList.remove('hidden');
+  const el=document.getElementById('error-state');
+  el.classList.remove('hidden');
+  if(msg) el.innerHTML+=`<p style="margin-top:12px;font-size:12px;color:#f87171;font-family:monospace;word-break:break-all;max-width:400px;margin:12px auto 0">${msg}</p>`;
 }
 
 function setAttend(val){
