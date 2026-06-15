@@ -1,0 +1,21 @@
+{
+  "name": "Event Party",
+  "short_name": "Event Party",
+  "description": "Hệ thống quản lý tiệc & RSVP chuyên nghiệp",
+  "start_url": "/Party-Project/index.html",
+  "scope": "/Party-Project/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c10",
+  "theme_color": "#c9a96e",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230e0b08'/><text x='256' y='200' font-family='Georgia,serif' font-size='120' fill='%23d4af7a' text-anchor='middle' font-weight='bold'>EP</text><text x='256' y='320' font-family='Georgia,serif' font-size='52' fill='%23f0d9a0' text-anchor='middle'>Event Party</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "utilities"],
+  "lang": "vi"
+}
