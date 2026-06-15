@@ -669,6 +669,16 @@ select.form-input option{background:var(--surface2)}
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
+// ── Zalo/redirect fix ────────────────────────────────────────
+(function(){
+  const full = window.location.href;
+  const match = full.match(/rsvp[.]html[?]event=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if(match){
+    const base = window.location.origin + window.location.pathname.split('/').slice(0,-1).join('/') + '/';
+    window.location.replace(base + 'rsvp.html?event=' + match[1]);
+  }
+})();
+
 // ── Config ────────────────────────────────────────────────────
 const SUPA_URL = 'https://zvpxvikwhcryeniquexp.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cHh2aWt3aGNyeWVuaXF1ZXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTUwMzksImV4cCI6MjA5NzA3MTAzOX0.aG5geshWV650mmipq_7FyxI1mqESuZ1VBsYTQSqTRxI';
