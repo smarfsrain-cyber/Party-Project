@@ -4,357 +4,273 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Xác nhận tham dự — LễTiệc</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0b0c10;--surface:#13141a;--surface2:#1c1e28;
-  --border:rgba(255,255,255,0.09);--text:#f0eee8;--muted:#7a7a8a;
-  --theme-primary:#d4af7a;--theme-secondary:#f0d9a0;
-  --theme-glow:rgba(212,175,122,0.15);
-}
-body[data-theme="wedding"]{--theme-primary:#d4af7a;--theme-secondary:#f0d9a0;--theme-glow:rgba(212,175,122,0.15);--bg-grad:linear-gradient(160deg,#0e0b08 0%,#1a1510 60%,#0e0a06 100%)}
-body[data-theme="thoi_noi"]{--theme-primary:#5cb8a0;--theme-secondary:#7dd8c0;--theme-glow:rgba(92,184,160,0.15);--bg-grad:linear-gradient(160deg,#060e0c 0%,#0e1a17 60%,#060e0a 100%)}
-body[data-theme="day_thang"]{--theme-primary:#d98fa0;--theme-secondary:#f0b0c0;--theme-glow:rgba(217,143,160,0.15);--bg-grad:linear-gradient(160deg,#0e080b 0%,#1a1015 60%,#0e0809 100%)}
-body[data-theme="dam_gio"]{--theme-primary:#a0a8b8;--theme-secondary:#c0cad8;--theme-glow:rgba(160,168,184,0.12);--bg-grad:linear-gradient(160deg,#090a0c 0%,#131520 60%,#0a0b0e 100%)}
-body[data-theme="birthday"]{--theme-primary:#9b7fe8;--theme-secondary:#c0a0ff;--theme-glow:rgba(155,127,232,0.18);--bg-grad:linear-gradient(160deg,#08060e 0%,#100d1a 60%,#080610 100%)}
-
-html,body{min-height:100%;font-family:'Inter',sans-serif;color:var(--text);font-size:15px;line-height:1.5}
-body{background:var(--bg-grad,var(--bg));background-attachment:fixed}
-
+:root{--primary:#d4af7a;--secondary:#f0d9a0;--bg:#0b0c10;--surface:#13141a;--border:rgba(255,255,255,0.09);--text:#f0eee8;--muted:#7a7a8a}
+body{min-height:100vh;font-family:'Inter',sans-serif;color:var(--text);font-size:15px;line-height:1.5;background:#0e0b08}
 .page{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 60px}
-
-/* ── Hero ── */
-.hero{width:100%;max-width:500px;border-radius:20px;overflow:hidden;
-  margin-bottom:28px;position:relative;min-height:220px;
-  background:var(--surface);}
-.hero-img{width:100%;height:240px;object-fit:cover;display:block}
-.hero-fallback{height:200px;display:flex;align-items:center;justify-content:center;font-size:80px}
-.hero-overlay{
-  position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,.8) 0%,rgba(0,0,0,.1) 60%,transparent 100%);
-  display:flex;align-items:flex-end;padding:24px}
-.hero-text .event-name{
-  font-family:'Playfair Display',serif;font-size:26px;font-weight:700;
-  color:#fff;line-height:1.2;margin-bottom:6px}
-.hero-text .event-meta{font-size:13px;color:rgba(255,255,255,.75);display:flex;flex-direction:column;gap:3px}
-
-/* ── Card ── */
-.card{
-  width:100%;max-width:500px;
-  background:rgba(19,20,26,.85);border:1px solid var(--border);
-  border-radius:20px;padding:28px;backdrop-filter:blur(16px)}
-
-/* ── Form ── */
-.form-group{margin-bottom:20px}
-.form-label{display:block;font-size:11px;font-weight:700;letter-spacing:1.2px;
-  text-transform:uppercase;color:var(--theme-primary);margin-bottom:8px}
-.form-input{
-  width:100%;padding:11px 15px;border-radius:11px;
-  background:rgba(255,255,255,0.06);border:1px solid var(--border);
-  color:var(--text);font-size:14px;outline:none;transition:border-color .2s;
-  font-family:inherit}
-.form-input:focus{border-color:var(--theme-primary);background:rgba(255,255,255,.08)}
-.form-input::placeholder{color:var(--muted)}
-
-/* ── Attend toggle ── */
-.attend-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
-.attend-btn{
-  padding:14px 10px;border-radius:12px;border:2px solid var(--border);
-  background:rgba(255,255,255,.04);cursor:pointer;text-align:center;
-  transition:all .2s;font-size:14px;font-weight:600;color:var(--muted);
-  font-family:inherit}
-.attend-btn:hover{border-color:var(--theme-primary);color:var(--text)}
-.attend-btn.selected-yes{
-  border-color:#34d399;background:rgba(52,211,153,.1);color:#34d399}
-.attend-btn.selected-no{
-  border-color:#f87171;background:rgba(248,113,113,.1);color:#f87171}
-.attend-btn .btn-em{font-size:20px;display:block;margin-bottom:3px}
-
-/* ── Counter ── */
-.counter{display:flex;align-items:center;gap:14px}
-.counter-btn{
-  width:38px;height:38px;border-radius:50%;border:1px solid var(--border);
-  background:rgba(255,255,255,.06);color:var(--text);font-size:20px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .2s;font-family:inherit;line-height:1}
-.counter-btn:hover{border-color:var(--theme-primary);color:var(--theme-primary)}
-.counter-val{font-size:24px;font-weight:800;color:var(--theme-primary);
-  min-width:32px;text-align:center;font-family:'Playfair Display',serif}
-
-/* ── Submit button ── */
-.btn-submit{
-  width:100%;padding:14px;border-radius:12px;border:none;
-  background:linear-gradient(135deg,var(--theme-primary),var(--theme-secondary));
-  color:#0b0c10;font-size:15px;font-weight:700;cursor:pointer;
-  font-family:inherit;transition:all .2s;margin-top:4px}
-.btn-submit:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
-
-/* ── Success ── */
-.success-wrap{text-align:center;padding:20px 0}
-.success-em{font-size:64px;margin-bottom:16px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
-.success-title{font-family:'Playfair Display',serif;font-size:26px;
-  color:var(--theme-primary);margin-bottom:10px}
-.success-sub{font-size:14px;color:var(--muted);line-height:1.7}
-
-/* ── Loading ── */
-.loading-state{text-align:center;padding:80px 20px}
-.loading-dot{display:inline-block;width:8px;height:8px;border-radius:50%;
-  background:var(--theme-primary);animation:pulse 1.2s ease infinite;margin:0 3px}
-.loading-dot:nth-child(2){animation-delay:.2s}
-.loading-dot:nth-child(3){animation-delay:.4s}
+/* themes */
+body.t-wedding{background:linear-gradient(160deg,#0e0b08,#1a1510,#0e0a06);--primary:#d4af7a;--secondary:#f0d9a0}
+body.t-thoi_noi{background:linear-gradient(160deg,#060e0c,#0e1a17,#060e0a);--primary:#5cb8a0;--secondary:#7dd8c0}
+body.t-day_thang{background:linear-gradient(160deg,#0e080b,#1a1015,#0e0809);--primary:#d98fa0;--secondary:#f0b0c0}
+body.t-dam_gio{background:linear-gradient(160deg,#090a0c,#131520,#0a0b0e);--primary:#a0a8b8;--secondary:#c0cad8}
+body.t-birthday{background:linear-gradient(160deg,#08060e,#100d1a,#080610);--primary:#9b7fe8;--secondary:#c0a0ff}
+/* loading */
+#screen-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px}
+.dots{display:flex;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--primary);animation:pulse 1.2s ease infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
 @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
-.error-state{text-align:center;padding:60px 20px}
-
-/* ── Footer ── */
-.footer{margin-top:32px;font-size:12px;color:var(--muted);text-align:center}
-.footer a{color:var(--theme-primary)}
-
-@media(max-width:420px){
-  .page{padding:20px 12px 40px}
-  .card{padding:20px 16px}
-  .hero-text .event-name{font-size:20px}
-}
+/* screens */
+#screen-error,#screen-form{display:none;width:100%;max-width:500px}
+#screen-error{text-align:center;padding:60px 20px}
+.err-em{font-size:52px;margin-bottom:16px}
+.err-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin-bottom:8px}
+.err-sub{font-size:13px;color:var(--muted)}
+/* hero */
+.hero{border-radius:20px;overflow:hidden;margin-bottom:24px;position:relative;min-height:180px;background:var(--surface)}
+.hero-img{width:100%;height:220px;object-fit:cover;display:block}
+.hero-fb{height:180px;display:flex;align-items:center;justify-content:center;font-size:72px}
+.hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),transparent 60%);display:flex;align-items:flex-end;padding:20px}
+.ev-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px}
+.ev-meta{font-size:12px;color:rgba(255,255,255,.75);display:flex;flex-direction:column;gap:2px}
+/* desc */
+.ev-desc{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.7;text-align:center}
+/* card */
+.card{background:rgba(19,20,26,.9);border:1px solid var(--border);border-radius:20px;padding:26px;backdrop-filter:blur(16px)}
+.card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--primary);text-align:center;margin-bottom:20px}
+/* attend toggle */
+.tog{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.tog-btn{padding:13px 8px;border-radius:12px;border:2px solid var(--border);background:rgba(255,255,255,.04);cursor:pointer;text-align:center;font-size:13px;font-weight:600;color:var(--muted);font-family:inherit;transition:all .2s}
+.tog-btn .em{font-size:18px;display:block;margin-bottom:3px}
+.tog-btn.yes{border-color:#34d399;background:rgba(52,211,153,.1);color:#34d399}
+.tog-btn.no{border-color:#f87171;background:rgba(248,113,113,.1);color:#f87171}
+/* form */
+.fg{margin-bottom:18px}
+.fl{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:7px}
+.fi{width:100%;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--text);font-size:14px;outline:none;transition:border-color .2s;font-family:inherit}
+.fi:focus{border-color:var(--primary)}
+.fi::placeholder{color:var(--muted)}
+textarea.fi{resize:vertical;min-height:72px}
+/* counter */
+.ctr{display:flex;align-items:center;gap:14px}
+.ctr-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:inherit;line-height:1}
+.ctr-btn:hover{border-color:var(--primary);color:var(--primary)}
+.ctr-val{font-size:24px;font-weight:800;color:var(--primary);min-width:32px;text-align:center;font-family:'Playfair Display',serif}
+/* submit */
+.btn-sub{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0b0c10;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:6px}
+.btn-sub:hover{filter:brightness(1.1)}
+.btn-sub:disabled{opacity:.5;cursor:not-allowed}
+/* success */
+.suc{text-align:center;padding:16px 0}
+.suc-em{font-size:60px;margin-bottom:14px;animation:pop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.suc-title{font-family:'Playfair Display',serif;font-size:24px;color:var(--primary);margin-bottom:10px}
+.suc-sub{font-size:13px;color:var(--muted);line-height:1.8}
+/* footer */
+.ft{margin-top:28px;font-size:12px;color:var(--muted);text-align:center}
+.ft a{color:var(--primary)}
+@media(max-width:420px){.page{padding:20px 12px 40px}.card{padding:18px 14px}}
 </style>
 </head>
-<body data-theme="wedding">
+<body>
 <div class="page">
 
-  <!-- Loading -->
-  <div id="loading-state" class="loading-state">
-    <div>
-      <span class="loading-dot"></span>
-      <span class="loading-dot"></span>
-      <span class="loading-dot"></span>
-    </div>
-    <p style="margin-top:16px;color:var(--muted);font-size:14px">Đang tải thông tin sự kiện...</p>
+  <!-- LOADING -->
+  <div id="screen-loading">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <p style="color:var(--muted);font-size:14px">Đang tải thông tin sự kiện...</p>
   </div>
 
-  <!-- Error -->
-  <div id="error-state" class="error-state hidden">
-    <div style="font-size:48px;margin-bottom:16px">😕</div>
-    <h2 style="color:var(--text);margin-bottom:8px">Không tìm thấy sự kiện</h2>
-    <p style="color:var(--muted);font-size:14px">Link mời không hợp lệ hoặc sự kiện đã bị xoá.</p>
+  <!-- ERROR -->
+  <div id="screen-error">
+    <div class="err-em">😕</div>
+    <div class="err-title">Không tìm thấy sự kiện</div>
+    <div class="err-sub">Link mời không hợp lệ hoặc sự kiện đã bị xoá.</div>
   </div>
 
-  <!-- Content -->
-  <div id="content" class="hidden" style="width:100%;max-width:500px">
-
+  <!-- FORM -->
+  <div id="screen-form">
     <!-- Hero -->
-    <div class="hero" id="hero-wrap">
-      <div id="hero-fallback" class="hero-fallback">💍</div>
-      <div class="hero-overlay">
-        <div class="hero-text">
-          <div class="event-name" id="ev-name-display"></div>
-          <div class="event-meta" id="ev-meta-display"></div>
+    <div class="hero" id="hero">
+      <div id="hero-fb" class="hero-fb">💍</div>
+      <div class="hero-ov">
+        <div>
+          <div class="ev-name" id="ev-name"></div>
+          <div class="ev-meta" id="ev-meta"></div>
         </div>
       </div>
     </div>
 
     <!-- Description -->
-    <div id="ev-desc-wrap" class="hidden" style="
-      max-width:500px;width:100%;
-      background:rgba(255,255,255,.04);border:1px solid var(--border);
-      border-radius:14px;padding:16px 20px;margin-bottom:20px;
-      font-size:14px;color:var(--muted);line-height:1.7;text-align:center">
-    </div>
+    <div class="ev-desc" id="ev-desc" style="display:none"></div>
 
-    <!-- RSVP Form -->
-    <div class="card" id="rsvp-form">
-      <div style="font-family:'Playfair Display',serif;font-size:18px;
-        color:var(--theme-primary);margin-bottom:20px;text-align:center">
-        Xác nhận tham dự
+    <!-- Card -->
+    <div class="card">
+      <div class="card-title">Xác nhận tham dự</div>
+
+      <div class="tog">
+        <button class="tog-btn yes" id="btn-yes" onclick="setAttend(true)">
+          <span class="em">✅</span>Tôi sẽ đến
+        </button>
+        <button class="tog-btn" id="btn-no" onclick="setAttend(false)">
+          <span class="em">❌</span>Tôi không đến
+        </button>
       </div>
 
-      <!-- Attend choice -->
-      <div class="form-group">
-        <label class="form-label">Bạn có tham dự không?</label>
-        <div class="attend-toggle">
-          <button class="attend-btn selected-yes" id="btn-yes" onclick="setAttend(true)">
-            <span class="btn-em">✅</span>Tôi sẽ đến
-          </button>
-          <button class="attend-btn" id="btn-no" onclick="setAttend(false)">
-            <span class="btn-em">❌</span>Tôi không đến
-          </button>
-        </div>
+      <div class="fg">
+        <label class="fl">Họ tên *</label>
+        <input id="g-name" class="fi" type="text" placeholder="Nguyễn Văn A" autocomplete="name"/>
       </div>
-
-      <!-- Name -->
-      <div class="form-group">
-        <label class="form-label">Họ tên *</label>
-        <input id="g-name" type="text" class="form-input" placeholder="Nguyễn Văn A"
-          autocomplete="name"/>
+      <div class="fg">
+        <label class="fl">Số điện thoại</label>
+        <input id="g-phone" class="fi" type="tel" placeholder="0901 234 567" autocomplete="tel"/>
       </div>
-
-      <!-- Phone -->
-      <div class="form-group">
-        <label class="form-label">Số điện thoại</label>
-        <input id="g-phone" type="tel" class="form-input" placeholder="0901 234 567"
-          autocomplete="tel"/>
-      </div>
-
-      <!-- Extra count (only when attending) -->
-      <div id="extra-wrap" class="form-group">
-        <label class="form-label">Số người đi cùng</label>
-        <div class="counter">
-          <button class="counter-btn" onclick="changeExtra(-1)">−</button>
-          <div class="counter-val" id="extra-val">0</div>
-          <button class="counter-btn" onclick="changeExtra(1)">+</button>
+      <div class="fg" id="extra-wrap">
+        <label class="fl">Số người đi cùng</label>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="chg(-1)">−</button>
+          <div class="ctr-val" id="ctr-val">0</div>
+          <button class="ctr-btn" onclick="chg(1)">+</button>
           <span style="font-size:13px;color:var(--muted)">người (ngoài bạn)</span>
         </div>
       </div>
-
-      <!-- Note -->
-      <div class="form-group">
-        <label class="form-label">Ghi chú</label>
-        <textarea id="g-note" class="form-input" rows="2"
-          placeholder="Dị ứng thực phẩm, yêu cầu đặc biệt..."></textarea>
+      <div class="fg">
+        <label class="fl">Ghi chú</label>
+        <textarea id="g-note" class="fi" placeholder="Dị ứng thực phẩm, yêu cầu đặc biệt..."></textarea>
       </div>
 
-      <button class="btn-submit" id="btn-submit" onclick="submitRSVP()">
-        ✅ Xác nhận tham dự
-      </button>
+      <button class="btn-sub" id="btn-sub" onclick="submit()">✅ Xác nhận tham dự</button>
     </div>
 
-    <div class="footer">Hệ thống RSVP bởi <a href="index.html">🎊 LễTiệc</a></div>
+    <div class="ft">Hệ thống RSVP bởi <a href="index.html">🎊 LễTiệc</a></div>
   </div>
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPA_URL='https://zvpxvikwhcryeniquexp.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cHh2aWt3aGNyeWVuaXF1ZXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTUwMzksImV4cCI6MjA5NzA3MTAzOX0.aG5geshWV650mmipq_7FyxI1mqESuZ1VBsYTQSqTRxI';
-const{createClient}=supabase;
-const sb=createClient(SUPA_URL,SUPA_KEY);
 
-const PARTY_TYPES={
-  wedding:{label:'Đám cưới',emoji:'💍',theme:'wedding'},
-  thoi_noi:{label:'Thôi nôi',emoji:'🍼',theme:'thoi_noi'},
-  day_thang:{label:'Đầy tháng',emoji:'🌸',theme:'day_thang'},
-  dam_gio:{label:'Đám giỗ',emoji:'🕯️',theme:'dam_gio'},
-  birthday:{label:'Sinh nhật',emoji:'🎂',theme:'birthday'},
+const TYPES={
+  wedding:{label:'Đám cưới',emoji:'💍',cls:'t-wedding'},
+  thoi_noi:{label:'Thôi nôi',emoji:'🍼',cls:'t-thoi_noi'},
+  day_thang:{label:'Đầy tháng',emoji:'🌸',cls:'t-day_thang'},
+  dam_gio:{label:'Đám giỗ',emoji:'🕯️',cls:'t-dam_gio'},
+  birthday:{label:'Sinh nhật',emoji:'🎂',cls:'t-birthday'},
 };
 
-let attending=true;
-let extraCount=0;
-let currentEvent=null;
+let sb, ev, attending=true, extra=0;
+
+function show(id){
+  document.getElementById('screen-loading').style.display='none';
+  document.getElementById('screen-error').style.display='none';
+  document.getElementById('screen-form').style.display='none';
+  document.getElementById(id).style.display= id==='screen-form'?'block':'block';
+}
 
 async function init(){
   const params=new URLSearchParams(window.location.search);
   const eventId=params.get('event');
-  if(!eventId){showError('Không có event ID trong URL.');return;}
+  if(!eventId){show('screen-error');return;}
 
-  try {
+  try{
+    const{createClient}=supabase;
+    sb=createClient(SUPA_URL,SUPA_KEY);
     const{data,error}=await sb.from('events').select('*').eq('id',eventId).single();
-    if(error){showError('Supabase error: '+error.message+' | code: '+error.code);return;}
-    if(!data){showError('Không tìm thấy sự kiện với ID: '+eventId);return;}
-    currentEvent=data;
-    renderEvent(data);
-  } catch(e){
-    showError('Exception: '+e.message);
+    if(error||!data){show('screen-error');return;}
+    ev=data;
+    render(data);
+  }catch(e){
+    show('screen-error');
   }
 }
 
-function renderEvent(ev){
-  const t=PARTY_TYPES[ev.type]||PARTY_TYPES.wedding;
-  document.body.setAttribute('data-theme',t.theme);
-  document.title=`${ev.name} — LễTiệc`;
+function render(e){
+  const t=TYPES[e.type]||TYPES.wedding;
+  document.body.className=t.cls;
+  document.title=e.name+' — LễTiệc';
 
-  // Hero
-  if(ev.image_url){
+  // hero image
+  if(e.image_url){
     const img=document.createElement('img');
-    img.src=ev.image_url;img.className='hero-img';img.alt='';
-    document.getElementById('hero-fallback').replaceWith(img);
+    img.src=e.image_url;img.className='hero-img';img.alt='';
+    document.getElementById('hero-fb').replaceWith(img);
   } else {
-    document.getElementById('hero-fallback').textContent=t.emoji;
+    document.getElementById('hero-fb').textContent=t.emoji;
   }
 
-  document.getElementById('ev-name-display').textContent=ev.name;
+  document.getElementById('ev-name').textContent=e.name;
   const meta=[];
-  if(ev.date){
-    const d=new Date(ev.date+'T00:00:00');
-    meta.push('📅 '+d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})+(ev.time?' · '+ev.time:''));
+  if(e.date){
+    const d=new Date(e.date+'T00:00:00');
+    meta.push('📅 '+d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})+(e.time?' · '+e.time:''));
   }
-  if(ev.location) meta.push('📍 '+ev.location);
-  document.getElementById('ev-meta-display').innerHTML=meta.map(m=>`<span>${m}</span>`).join('');
+  if(e.location) meta.push('📍 '+e.location);
+  document.getElementById('ev-meta').innerHTML=meta.map(m=>`<span>${m}</span>`).join('');
 
-  if(ev.description){
-    const dw=document.getElementById('ev-desc-wrap');
-    dw.textContent=ev.description;
-    dw.classList.remove('hidden');
+  if(e.description){
+    const d=document.getElementById('ev-desc');
+    d.textContent=e.description;
+    d.style.display='block';
   }
 
-  document.getElementById('loading-state').classList.add('hidden');
-  document.getElementById('error-state').classList.add('hidden');
-  document.getElementById('content').classList.remove('hidden');
-}
-
-function showError(msg){
-  document.getElementById('loading-state').classList.add('hidden');
-  const el=document.getElementById('error-state');
-  el.classList.remove('hidden');
-  if(msg) el.innerHTML+=`<p style="margin-top:12px;font-size:12px;color:#f87171;font-family:monospace;word-break:break-all;max-width:400px;margin:12px auto 0">${msg}</p>`;
+  show('screen-form');
+  setAttend(true);
 }
 
 function setAttend(val){
   attending=val;
-  document.getElementById('btn-yes').className='attend-btn'+(val?' selected-yes':'');
-  document.getElementById('btn-no').className='attend-btn'+(!val?' selected-no':'');
-  document.getElementById('extra-wrap').style.display=val?'':'none';
-  const btn=document.getElementById('btn-submit');
-  btn.textContent=val?`✅ Xác nhận — ${1+extraCount} người`:'📩 Gửi phản hồi';
+  document.getElementById('btn-yes').className='tog-btn'+(val?' yes':'');
+  document.getElementById('btn-no').className='tog-btn'+(!val?' no':'');
+  document.getElementById('extra-wrap').style.display=val?'block':'none';
+  updateBtn();
 }
 
-function changeExtra(delta){
-  extraCount=Math.max(0,extraCount+delta);
-  document.getElementById('extra-val').textContent=extraCount;
-  if(attending){
-    document.getElementById('btn-submit').textContent=`✅ Xác nhận — ${1+extraCount} người`;
-  }
+function chg(d){
+  extra=Math.max(0,extra+d);
+  document.getElementById('ctr-val').textContent=extra;
+  updateBtn();
 }
 
-async function submitRSVP(){
+function updateBtn(){
+  const b=document.getElementById('btn-sub');
+  b.textContent=attending?`✅ Xác nhận — ${1+extra} người`:'📩 Gửi phản hồi';
+}
+
+async function submit(){
   const name=document.getElementById('g-name').value.trim();
   if(!name){alert('Vui lòng nhập tên của bạn.');return;}
-  const btn=document.getElementById('btn-submit');
+  const btn=document.getElementById('btn-sub');
   btn.disabled=true;btn.textContent='Đang gửi...';
 
-  const{error}=await sb.from('guests').insert({
-    event_id:currentEvent.id,
-    name,
-    phone:document.getElementById('g-phone').value.trim()||null,
-    extra_count:attending?extraCount:0,
-    attend:attending,
-    note:document.getElementById('g-note').value.trim()||null,
-  });
+  try{
+    const{error}=await sb.from('guests').insert({
+      event_id:ev.id,name,
+      phone:document.getElementById('g-phone').value.trim()||null,
+      extra_count:attending?extra:0,
+      attend:attending,
+      note:document.getElementById('g-note').value.trim()||null,
+    });
+    if(error)throw error;
 
-  if(error){
+    document.querySelector('.card').innerHTML=`
+      <div class="suc">
+        <div class="suc-em">${attending?'🎉':'💌'}</div>
+        <div class="suc-title">${attending?'Đã xác nhận!':'Đã ghi nhận'}</div>
+        <p class="suc-sub">${attending
+          ?`Hẹn gặp <b>${name}</b>${extra>0?' và '+extra+' người':''} tại <b>${ev.location||'buổi tiệc'}</b>! 🥂<br/><br/>Tổng <b>${1+extra} người</b> từ nhóm của bạn.`
+          :`Cảm ơn <b>${name}</b> đã thông báo. Hẹn dịp khác! 🙏`}</p>
+      </div>`;
+  }catch(e){
     btn.disabled=false;
-    setAttend(attending);
-    alert('Có lỗi xảy ra: '+error.message);
-    return;
+    updateBtn();
+    alert('Có lỗi xảy ra: '+(e.message||'Vui lòng thử lại.'));
   }
-
-  // Show success
-  document.getElementById('rsvp-form').innerHTML=`
-    <div class="success-wrap">
-      <div class="success-em">${attending?'🎉':'💌'}</div>
-      <div class="success-title">${attending?'Đã xác nhận!':'Đã ghi nhận'}</div>
-      <p class="success-sub">
-        ${attending
-          ?`Hẹn gặp <b>${name}</b> và ${extraCount>0?`${extraCount} người`:''}
-            tại <b>${currentEvent.location||'buổi tiệc'}</b>! 🥂<br/><br/>
-            Tổng: <b>${1+extraCount} người</b> từ nhóm của bạn.`
-          :`Cảm ơn <b>${name}</b> đã thông báo. Chúc bạn có dịp tham dự lần sau! 🙏`}
-      </p>
-    </div>`;
 }
 
-setAttend(true);
 init();
 </script>
 </body>
