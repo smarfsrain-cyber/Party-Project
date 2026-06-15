@@ -3,358 +3,1209 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Xác nhận tham dự — LễTiệc</title>
+<title>LễTiệc — Quản lý sự kiện & RSVP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0b0c10;--surface:#13141a;--surface2:#1c1e28;
-  --border:rgba(255,255,255,0.09);--text:#f0eee8;--muted:#7a7a8a;
-  --theme-primary:#d4af7a;--theme-secondary:#f0d9a0;
-  --theme-glow:rgba(212,175,122,0.15);
+  --bg:#0b0c10;
+  --surface:#13141a;
+  --surface2:#1c1e28;
+  --border:rgba(255,255,255,0.08);
+  --text:#f0eee8;
+  --muted:#7a7a8a;
+  --accent:#c9a96e;
+  --accent2:#e8c97a;
+
+  /* Party type tokens — overridden per theme */
+  --theme-primary:#c9a96e;
+  --theme-secondary:#e8c97a;
+  --theme-bg1:#0b0c10;
+  --theme-bg2:#13141a;
+  --theme-glow:rgba(201,169,110,0.15);
+  --theme-emoji:🥂;
 }
-body[data-theme="wedding"]{--theme-primary:#d4af7a;--theme-secondary:#f0d9a0;--theme-glow:rgba(212,175,122,0.15);--bg-grad:linear-gradient(160deg,#0e0b08 0%,#1a1510 60%,#0e0a06 100%)}
-body[data-theme="thoi_noi"]{--theme-primary:#5cb8a0;--theme-secondary:#7dd8c0;--theme-glow:rgba(92,184,160,0.15);--bg-grad:linear-gradient(160deg,#060e0c 0%,#0e1a17 60%,#060e0a 100%)}
-body[data-theme="day_thang"]{--theme-primary:#d98fa0;--theme-secondary:#f0b0c0;--theme-glow:rgba(217,143,160,0.15);--bg-grad:linear-gradient(160deg,#0e080b 0%,#1a1015 60%,#0e0809 100%)}
-body[data-theme="dam_gio"]{--theme-primary:#a0a8b8;--theme-secondary:#c0cad8;--theme-glow:rgba(160,168,184,0.12);--bg-grad:linear-gradient(160deg,#090a0c 0%,#131520 60%,#0a0b0e 100%)}
-body[data-theme="birthday"]{--theme-primary:#9b7fe8;--theme-secondary:#c0a0ff;--theme-glow:rgba(155,127,232,0.18);--bg-grad:linear-gradient(160deg,#08060e 0%,#100d1a 60%,#080610 100%)}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit}
 
-html,body{min-height:100%;font-family:'Inter',sans-serif;color:var(--text);font-size:15px;line-height:1.5}
-body{background:var(--bg-grad,var(--bg));background-attachment:fixed}
+/* ── Party Themes ── */
+body[data-theme="wedding"]{
+  --theme-primary:#d4af7a;--theme-secondary:#f0d9a0;
+  --theme-bg1:#0e0b08;--theme-bg2:#1a1510;--theme-glow:rgba(212,175,122,0.15)}
+body[data-theme="thoi_noi"]{
+  --theme-primary:#5cb8a0;--theme-secondary:#7dd8c0;
+  --theme-bg1:#060e0c;--theme-bg2:#0e1a17;--theme-glow:rgba(92,184,160,0.15)}
+body[data-theme="day_thang"]{
+  --theme-primary:#d98fa0;--theme-secondary:#f0b0c0;
+  --theme-bg1:#0e080b;--theme-bg2:#1a1015;--theme-glow:rgba(217,143,160,0.15)}
+body[data-theme="dam_gio"]{
+  --theme-primary:#a0a8b8;--theme-secondary:#c0cad8;
+  --theme-bg1:#090a0c;--theme-bg2:#131520;--theme-glow:rgba(160,168,184,0.12)}
+body[data-theme="birthday"]{
+  --theme-primary:#9b7fe8;--theme-secondary:#c0a0ff;
+  --theme-bg1:#08060e;--theme-bg2:#100d1a;--theme-glow:rgba(155,127,232,0.18)}
 
-.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 60px}
-
-/* ── Hero ── */
-.hero{width:100%;max-width:500px;border-radius:20px;overflow:hidden;
-  margin-bottom:28px;position:relative;min-height:220px;
-  background:var(--surface);}
-.hero-img{width:100%;height:240px;object-fit:cover;display:block}
-.hero-fallback{height:200px;display:flex;align-items:center;justify-content:center;font-size:80px}
-.hero-overlay{
-  position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,.8) 0%,rgba(0,0,0,.1) 60%,transparent 100%);
-  display:flex;align-items:flex-end;padding:24px}
-.hero-text .event-name{
-  font-family:'Playfair Display',serif;font-size:26px;font-weight:700;
-  color:#fff;line-height:1.2;margin-bottom:6px}
-.hero-text .event-meta{font-size:13px;color:rgba(255,255,255,.75);display:flex;flex-direction:column;gap:3px}
-
-/* ── Card ── */
-.card{
-  width:100%;max-width:500px;
-  background:rgba(19,20,26,.85);border:1px solid var(--border);
-  border-radius:20px;padding:28px;backdrop-filter:blur(16px)}
-
-/* ── Form ── */
-.form-group{margin-bottom:20px}
-.form-label{display:block;font-size:11px;font-weight:700;letter-spacing:1.2px;
-  text-transform:uppercase;color:var(--theme-primary);margin-bottom:8px}
-.form-input{
-  width:100%;padding:11px 15px;border-radius:11px;
-  background:rgba(255,255,255,0.06);border:1px solid var(--border);
-  color:var(--text);font-size:14px;outline:none;transition:border-color .2s;
-  font-family:inherit}
-.form-input:focus{border-color:var(--theme-primary);background:rgba(255,255,255,.08)}
-.form-input::placeholder{color:var(--muted)}
-
-/* ── Attend toggle ── */
-.attend-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
-.attend-btn{
-  padding:14px 10px;border-radius:12px;border:2px solid var(--border);
-  background:rgba(255,255,255,.04);cursor:pointer;text-align:center;
-  transition:all .2s;font-size:14px;font-weight:600;color:var(--muted);
-  font-family:inherit}
-.attend-btn:hover{border-color:var(--theme-primary);color:var(--text)}
-.attend-btn.selected-yes{
-  border-color:#34d399;background:rgba(52,211,153,.1);color:#34d399}
-.attend-btn.selected-no{
-  border-color:#f87171;background:rgba(248,113,113,.1);color:#f87171}
-.attend-btn .btn-em{font-size:20px;display:block;margin-bottom:3px}
-
-/* ── Counter ── */
-.counter{display:flex;align-items:center;gap:14px}
-.counter-btn{
-  width:38px;height:38px;border-radius:50%;border:1px solid var(--border);
-  background:rgba(255,255,255,.06);color:var(--text);font-size:20px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .2s;font-family:inherit;line-height:1}
-.counter-btn:hover{border-color:var(--theme-primary);color:var(--theme-primary)}
-.counter-val{font-size:24px;font-weight:800;color:var(--theme-primary);
-  min-width:32px;text-align:center;font-family:'Playfair Display',serif}
-
-/* ── Submit button ── */
-.btn-submit{
-  width:100%;padding:14px;border-radius:12px;border:none;
+/* ── Layout ── */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:260px;min-height:100vh;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border)}
+.sidebar-logo .wordmark{
+  font-family:'Playfair Display',serif;font-size:22px;font-weight:700;
+  color:var(--theme-primary);letter-spacing:.5px}
+.sidebar-logo .tagline{font-size:11px;color:var(--muted);margin-top:2px}
+.sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto}
+.nav-section-label{
+  font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--muted);
+  text-transform:uppercase;padding:8px 12px 6px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;
+  transition:all .2s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--theme-glow);color:var(--theme-primary);
+  border:1px solid rgba(var(--theme-primary-rgb,201,169,110),.2)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-user{
+  padding:16px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px}
+.user-avatar{
+  width:34px;height:34px;border-radius:50%;
   background:linear-gradient(135deg,var(--theme-primary),var(--theme-secondary));
-  color:#0b0c10;font-size:15px;font-weight:700;cursor:pointer;
-  font-family:inherit;transition:all .2s;margin-top:4px}
-.btn-submit:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#0b0c10;flex-shrink:0}
+.user-name{font-size:13px;font-weight:500;color:var(--text);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-email{font-size:11px;color:var(--muted)}
+.btn-logout{background:none;border:none;color:var(--muted);font-size:18px;
+  cursor:pointer;padding:4px;border-radius:6px;transition:color .2s}
+.btn-logout:hover{color:#f87171}
 
-/* ── Success ── */
-.success-wrap{text-align:center;padding:20px 0}
-.success-em{font-size:64px;margin-bottom:16px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
-.success-title{font-family:'Playfair Display',serif;font-size:26px;
-  color:var(--theme-primary);margin-bottom:10px}
-.success-sub{font-size:14px;color:var(--muted);line-height:1.7}
+.main{margin-left:260px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{
+  padding:16px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(var(--surface-rgb,19,20,26),.8);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:50}
+.topbar-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--text)}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.page-content{flex:1;padding:32px}
 
-/* ── Loading ── */
-.loading-state{text-align:center;padding:80px 20px}
-.loading-dot{display:inline-block;width:8px;height:8px;border-radius:50%;
-  background:var(--theme-primary);animation:pulse 1.2s ease infinite;margin:0 3px}
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 20px;border-radius:10px;border:none;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .2s;white-space:nowrap}
+.btn-primary{
+  background:linear-gradient(135deg,var(--theme-primary),var(--theme-secondary));
+  color:#0b0c10}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-secondary{
+  background:var(--surface2);color:var(--text);
+  border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--theme-primary);color:var(--theme-primary)}
+.btn-ghost{background:none;border:none;color:var(--muted);font-size:13px;padding:6px 10px}
+.btn-ghost:hover{color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-icon{padding:8px;border-radius:8px}
+
+/* ── Cards ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:24px}
+.card-sm{padding:16px;border-radius:12px}
+.card-hover{transition:border-color .2s,transform .2s,box-shadow .2s;cursor:pointer}
+.card-hover:hover{border-color:var(--theme-primary);
+  transform:translateY(-2px);box-shadow:0 8px 32px var(--theme-glow)}
+
+/* ── Forms ── */
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:12px;font-weight:600;
+  color:var(--theme-primary);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+.form-input{
+  width:100%;padding:10px 14px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--theme-primary)}
+.form-input::placeholder{color:var(--muted)}
+textarea.form-input{resize:vertical;min-height:80px}
+select.form-input option{background:var(--surface2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ── Auth Screen ── */
+.auth-wrap{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 60% 40%,var(--theme-glow) 0%,transparent 60%),var(--bg);
+  padding:24px}
+.auth-box{
+  width:100%;max-width:420px;background:var(--surface);
+  border:1px solid var(--border);border-radius:24px;padding:40px}
+.auth-logo{text-align:center;margin-bottom:32px}
+.auth-logo .big{font-family:'Playfair Display',serif;font-size:32px;
+  color:var(--theme-primary);font-weight:700}
+.auth-logo .sub{font-size:13px;color:var(--muted);margin-top:4px}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:10px;
+  padding:4px;margin-bottom:24px}
+.auth-tab{flex:1;padding:8px;border-radius:8px;border:none;background:none;
+  font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s}
+.auth-tab.active{background:var(--theme-glow);color:var(--theme-primary)}
+.auth-divider{text-align:center;color:var(--muted);font-size:12px;
+  margin:16px 0;position:relative}
+.auth-divider::before,.auth-divider::after{
+  content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border)}
+.auth-divider::before{left:0}.auth-divider::after{right:0}
+
+/* ── Event Cards (list) ── */
+.events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.event-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;transition:all .2s;cursor:pointer}
+.event-card:hover{border-color:var(--theme-primary);transform:translateY(-3px);
+  box-shadow:0 12px 40px var(--theme-glow)}
+.event-card-banner{height:140px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--theme-bg2),var(--surface2))}
+.event-card-banner img{width:100%;height:100%;object-fit:cover}
+.event-type-badge{
+  position:absolute;top:10px;left:10px;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;
+  color:var(--theme-secondary)}
+.event-card-body{padding:16px}
+.event-card-name{font-family:'Playfair Display',serif;font-size:17px;
+  font-weight:600;color:var(--text);margin-bottom:6px}
+.event-card-meta{font-size:12px;color:var(--muted);display:flex;
+  flex-direction:column;gap:3px;margin-bottom:12px}
+.event-card-stats{display:flex;gap:8px;flex-wrap:wrap}
+.stat-chip{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted)}
+.stat-chip.highlight{background:var(--theme-glow);color:var(--theme-primary);
+  border-color:rgba(var(--theme-primary-rgb,201,169,110),.3)}
+
+/* ── Dashboard KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.kpi-card::before{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;
+  background:var(--theme-glow);filter:blur(20px)}
+.kpi-icon{font-size:22px;margin-bottom:8px}
+.kpi-value{font-size:32px;font-weight:800;color:var(--theme-primary);
+  font-family:'Playfair Display',serif;line-height:1}
+.kpi-label{font-size:11px;color:var(--muted);margin-top:4px;font-weight:500}
+
+/* ── Table layout preview ── */
+.tables-grid{display:flex;flex-wrap:wrap;gap:10px}
+.table-chip{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:10px 14px;text-align:center;min-width:72px;
+  transition:border-color .2s}
+.table-chip:hover{border-color:var(--theme-primary)}
+.table-chip .t-icon{font-size:20px;margin-bottom:2px}
+.table-chip .t-num{font-size:13px;font-weight:700;color:var(--theme-secondary)}
+.table-chip .t-fill{font-size:11px;color:var(--muted)}
+.table-chip.t-partial{border-color:rgba(var(--theme-primary-rgb,201,169,110),.4)}
+
+/* ── Guest list ── */
+.guest-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:8px;transition:border-color .2s}
+.guest-item:hover{border-color:var(--border)}
+.guest-avatar{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;flex-shrink:0}
+.guest-info{flex:1;min-width:0}
+.guest-name{font-size:14px;font-weight:600;color:var(--text)}
+.guest-sub{font-size:12px;color:var(--muted)}
+.badge{
+  display:inline-flex;align-items:center;padding:3px 10px;
+  border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.2)}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.2)}
+
+/* ── Modal ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:24px;padding:32px;width:100%;max-width:540px;
+  max-height:90vh;overflow-y:auto;
+  transform:translateY(20px);transition:transform .25s}
+.modal-overlay.open .modal-box{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.modal-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--text)}
+.modal-close{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:6px 10px;font-size:16px;
+  color:var(--muted);cursor:pointer;transition:all .2s}
+.modal-close:hover{border-color:var(--muted);color:var(--text)}
+
+/* ── Image upload ── */
+.img-upload-area{
+  border:2px dashed var(--border);border-radius:12px;
+  padding:24px;text-align:center;cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden}
+.img-upload-area:hover,.img-upload-area.dragover{
+  border-color:var(--theme-primary);background:var(--theme-glow)}
+.img-upload-area img{width:100%;max-height:180px;object-fit:cover;border-radius:8px}
+.img-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.img-preset{border-radius:8px;overflow:hidden;cursor:pointer;
+  border:2px solid transparent;transition:border-color .2s;aspect-ratio:16/9}
+.img-preset:hover,.img-preset.selected{border-color:var(--theme-primary)}
+.img-preset img{width:100%;height:100%;object-fit:cover}
+
+/* ── Party type selector ── */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.type-opt{
+  padding:12px 8px;border-radius:12px;border:2px solid var(--border);
+  background:var(--surface2);cursor:pointer;text-align:center;
+  transition:all .2s;font-size:13px;color:var(--muted)}
+.type-opt .type-em{font-size:22px;display:block;margin-bottom:4px}
+.type-opt:hover{border-color:var(--theme-primary);color:var(--text)}
+.type-opt.selected{border-color:var(--theme-primary);
+  background:var(--theme-glow);color:var(--theme-primary)}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 18px;font-size:13px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  animation:slideIn .3s ease forwards;max-width:320px}
+.toast.success{border-left:3px solid #34d399;color:var(--text)}
+.toast.error{border-left:3px solid #f87171;color:var(--text)}
+.toast.info{border-left:3px solid var(--theme-primary);color:var(--text)}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+
+/* ── Share link ── */
+.share-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px}
+.share-url{flex:1;font-size:12px;color:var(--muted);
+  font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:80px 24px}
+.empty-state .em{font-size:56px;margin-bottom:16px}
+.empty-state h3{font-family:'Playfair Display',serif;font-size:22px;
+  color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:14px;color:var(--muted);max-width:320px;margin:0 auto 24px}
+
+/* ── Section header ── */
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--text)}
+.section-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+/* ── Hamburger (mobile) ── */
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar-overlay.show{display:block}
+  .main{margin-left:0}
+  .topbar{padding:12px 16px}
+  .page-content{padding:16px}
+  .hamburger{display:block}
+  .form-row{grid-template-columns:1fr}
+  .events-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .type-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:420px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .auth-box{padding:28px 20px}
+}
+
+/* ── Misc utilities ── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.text-muted{color:var(--muted)}
+.text-accent{color:var(--theme-primary)}
+.mt-4{margin-top:4px}.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}
+.w-full{width:100%}
+.hidden{display:none!important}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--theme-primary);animation:pulse 1.2s ease infinite}
 .loading-dot:nth-child(2){animation-delay:.2s}
 .loading-dot:nth-child(3){animation-delay:.4s}
 @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
-.error-state{text-align:center;padding:60px 20px}
-
-/* ── Footer ── */
-.footer{margin-top:32px;font-size:12px;color:var(--muted);text-align:center}
-.footer a{color:var(--theme-primary)}
-
-@media(max-width:420px){
-  .page{padding:20px 12px 40px}
-  .card{padding:20px 16px}
-  .hero-text .event-name{font-size:20px}
-}
 </style>
 </head>
 <body data-theme="wedding">
-<div class="page">
 
-  <!-- Loading -->
-  <div id="loading-state" class="loading-state">
-    <div>
-      <span class="loading-dot"></span>
-      <span class="loading-dot"></span>
-      <span class="loading-dot"></span>
+<!-- Auth Screen -->
+<div id="auth-screen" class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="big">🎊 LễTiệc</div>
+      <div class="sub">Hệ thống quản lý tiệc & RSVP chuyên nghiệp</div>
     </div>
-    <p style="margin-top:16px;color:var(--muted);font-size:14px">Đang tải thông tin sự kiện...</p>
-  </div>
-
-  <!-- Error -->
-  <div id="error-state" class="error-state hidden">
-    <div style="font-size:48px;margin-bottom:16px">😕</div>
-    <h2 style="color:var(--text);margin-bottom:8px">Không tìm thấy sự kiện</h2>
-    <p style="color:var(--muted);font-size:14px">Link mời không hợp lệ hoặc sự kiện đã bị xoá.</p>
-  </div>
-
-  <!-- Content -->
-  <div id="content" class="hidden" style="width:100%;max-width:500px">
-
-    <!-- Hero -->
-    <div class="hero" id="hero-wrap">
-      <div id="hero-fallback" class="hero-fallback">💍</div>
-      <div class="hero-overlay">
-        <div class="hero-text">
-          <div class="event-name" id="ev-name-display"></div>
-          <div class="event-meta" id="ev-meta-display"></div>
-        </div>
-      </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Đăng nhập</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Đăng ký</button>
     </div>
-
-    <!-- Description -->
-    <div id="ev-desc-wrap" class="hidden" style="
-      max-width:500px;width:100%;
-      background:rgba(255,255,255,.04);border:1px solid var(--border);
-      border-radius:14px;padding:16px 20px;margin-bottom:20px;
-      font-size:14px;color:var(--muted);line-height:1.7;text-align:center">
-    </div>
-
-    <!-- RSVP Form -->
-    <div class="card" id="rsvp-form">
-      <div style="font-family:'Playfair Display',serif;font-size:18px;
-        color:var(--theme-primary);margin-bottom:20px;text-align:center">
-        Xác nhận tham dự
-      </div>
-
-      <!-- Attend choice -->
+    <div id="auth-login">
       <div class="form-group">
-        <label class="form-label">Bạn có tham dự không?</label>
-        <div class="attend-toggle">
-          <button class="attend-btn selected-yes" id="btn-yes" onclick="setAttend(true)">
-            <span class="btn-em">✅</span>Tôi sẽ đến
-          </button>
-          <button class="attend-btn" id="btn-no" onclick="setAttend(false)">
-            <span class="btn-em">❌</span>Tôi không đến
-          </button>
-        </div>
+        <label class="form-label">Email</label>
+        <input id="login-email" type="email" class="form-input" placeholder="ban@email.com"/>
       </div>
-
-      <!-- Name -->
       <div class="form-group">
-        <label class="form-label">Họ tên *</label>
-        <input id="g-name" type="text" class="form-input" placeholder="Nguyễn Văn A"
-          autocomplete="name"/>
+        <label class="form-label">Mật khẩu</label>
+        <input id="login-pass" type="password" class="form-input" placeholder="••••••••"/>
       </div>
-
-      <!-- Phone -->
-      <div class="form-group">
-        <label class="form-label">Số điện thoại</label>
-        <input id="g-phone" type="tel" class="form-input" placeholder="0901 234 567"
-          autocomplete="tel"/>
-      </div>
-
-      <!-- Extra count (only when attending) -->
-      <div id="extra-wrap" class="form-group">
-        <label class="form-label">Số người đi cùng</label>
-        <div class="counter">
-          <button class="counter-btn" onclick="changeExtra(-1)">−</button>
-          <div class="counter-val" id="extra-val">0</div>
-          <button class="counter-btn" onclick="changeExtra(1)">+</button>
-          <span style="font-size:13px;color:var(--muted)">người (ngoài bạn)</span>
-        </div>
-      </div>
-
-      <!-- Note -->
-      <div class="form-group">
-        <label class="form-label">Ghi chú</label>
-        <textarea id="g-note" class="form-input" rows="2"
-          placeholder="Dị ứng thực phẩm, yêu cầu đặc biệt..."></textarea>
-      </div>
-
-      <button class="btn-submit" id="btn-submit" onclick="submitRSVP()">
-        ✅ Xác nhận tham dự
+      <button class="btn btn-primary w-full" style="margin-top:8px" onclick="doLogin()">
+        Đăng nhập
       </button>
     </div>
-
-    <div class="footer">Hệ thống RSVP bởi <a href="index.html">🎊 LễTiệc</a></div>
+    <div id="auth-register" class="hidden">
+      <div class="form-group">
+        <label class="form-label">Họ tên</label>
+        <input id="reg-name" type="text" class="form-input" placeholder="Nguyễn Văn A"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="reg-email" type="email" class="form-input" placeholder="ban@email.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mật khẩu</label>
+        <input id="reg-pass" type="password" class="form-input" placeholder="Tối thiểu 6 ký tự"/>
+      </div>
+      <button class="btn btn-primary w-full" style="margin-top:8px" onclick="doRegister()">
+        Tạo tài khoản
+      </button>
+    </div>
+    <p id="auth-msg" style="margin-top:14px;text-align:center;font-size:13px;color:#f87171"></p>
   </div>
-
 </div>
 
-<script>
-const SUPA_URL='https://zvpxvikwhcryeniquexp.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cHh2aWt3aGNyeWVuaXF1ZXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTUwMzksImV4cCI6MjA5NzA3MTAzOX0.aG5geshWV650mmipq_7FyxI1mqESuZ1VBsYTQSqTRxI';
-const{createClient}=supabase;
-const sb=createClient(SUPA_URL,SUPA_KEY);
+<!-- App Shell -->
+<div id="app-shell" class="app-shell hidden">
 
-const PARTY_TYPES={
-  wedding:{label:'Đám cưới',emoji:'💍',theme:'wedding'},
-  thoi_noi:{label:'Thôi nôi',emoji:'🍼',theme:'thoi_noi'},
-  day_thang:{label:'Đầy tháng',emoji:'🌸',theme:'day_thang'},
-  dam_gio:{label:'Đám giỗ',emoji:'🕯️',theme:'dam_gio'},
-  birthday:{label:'Sinh nhật',emoji:'🎂',theme:'birthday'},
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="wordmark">🎊 LễTiệc</div>
+      <div class="tagline">Quản lý sự kiện & RSVP</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng quan</div>
+      <button class="nav-item active" onclick="showPage('events')" id="nav-events">
+        <span class="icon">🗂️</span> Sự kiện của tôi
+      </button>
+      <button class="nav-item" onclick="showPage('stats')" id="nav-stats">
+        <span class="icon">📊</span> Thống kê
+      </button>
+      <div class="nav-section-label" style="margin-top:16px">Hỗ trợ</div>
+      <button class="nav-item" onclick="showPage('guide')" id="nav-guide">
+        <span class="icon">📖</span> Hướng dẫn
+      </button>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div style="flex:1;min-width:0">
+        <div class="user-name" id="user-name-display">Loading...</div>
+        <div class="user-email" id="user-email-display"></div>
+      </div>
+      <button class="btn-logout" title="Đăng xuất" onclick="doLogout()">⏏</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="flex items-center gap-12">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <div id="topbar-title" class="topbar-title">Sự kiện của tôi</div>
+      </div>
+      <div class="topbar-actions" id="topbar-actions">
+        <button class="btn btn-primary" onclick="openCreateModal()">
+          <span>＋</span> Tạo sự kiện
+        </button>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="page-content">
+
+      <!-- Events Page -->
+      <div id="page-events">
+        <div id="events-loading" style="text-align:center;padding:60px">
+          <div style="display:inline-flex;gap:6px">
+            <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+          </div>
+        </div>
+        <div id="events-empty" class="empty-state hidden">
+          <div class="em">🎊</div>
+          <h3>Chưa có sự kiện nào</h3>
+          <p>Tạo sự kiện đầu tiên để bắt đầu quản lý danh sách khách mời</p>
+          <button class="btn btn-primary" onclick="openCreateModal()">＋ Tạo sự kiện đầu tiên</button>
+        </div>
+        <div id="events-grid" class="events-grid hidden"></div>
+      </div>
+
+      <!-- Event Detail Page -->
+      <div id="page-detail" class="hidden">
+        <button class="btn btn-ghost" style="margin-bottom:20px;padding-left:0" onclick="showPage('events')">
+          ← Quay lại danh sách
+        </button>
+        <div id="detail-content"></div>
+      </div>
+
+      <!-- Stats Page -->
+      <div id="page-stats" class="hidden">
+        <div class="section-hd">
+          <div><div class="section-title">Thống kê tổng hợp</div>
+          <div class="section-sub">Tất cả sự kiện của bạn</div></div>
+        </div>
+        <div id="stats-content"></div>
+      </div>
+
+      <!-- Guide Page -->
+      <div id="page-guide" class="hidden">
+        <div class="section-hd"><div class="section-title">Hướng dẫn sử dụng</div></div>
+        <div style="max-width:640px">
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-size:20px;margin-bottom:8px">🎊 Tạo sự kiện</div>
+            <p style="color:var(--muted);font-size:14px;line-height:1.7">
+              Bấm <b style="color:var(--theme-primary)">+ Tạo sự kiện</b>, chọn loại tiệc, điền thông tin, upload ảnh hoặc chọn ảnh mẫu. Mỗi sự kiện có link mời riêng.
+            </p>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-size:20px;margin-bottom:8px">🔗 Gửi link mời</div>
+            <p style="color:var(--muted);font-size:14px;line-height:1.7">
+              Vào chi tiết sự kiện → copy link → gửi qua Zalo / Messenger / SMS cho khách. Khách click link sẽ thấy form xác nhận tham dự.
+            </p>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-size:20px;margin-bottom:8px">📊 Theo dõi real-time</div>
+            <p style="color:var(--muted);font-size:14px;line-height:1.7">
+              Khi khách xác nhận, danh sách cập nhật ngay tức thì. Số bàn được tính tự động dựa trên tổng số người.
+            </p>
+          </div>
+          <div class="card">
+            <div style="font-size:20px;margin-bottom:8px">🪑 Sơ đồ bàn</div>
+            <p style="color:var(--muted);font-size:14px;line-height:1.7">
+              Hệ thống tự chia bàn theo số người mỗi bàn bạn đặt (mặc định 8). Bạn có thể điều chỉnh trong phần cài đặt của từng sự kiện.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<!-- Create/Edit Event Modal -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-event-title">Tạo sự kiện mới</div>
+      <button class="modal-close" onclick="closeModal('modal-event')">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Loại tiệc</label>
+      <div class="type-grid" id="type-grid">
+        <div class="type-opt selected" data-type="wedding" onclick="selectType(this)">
+          <span class="type-em">💍</span>Đám cưới
+        </div>
+        <div class="type-opt" data-type="thoi_noi" onclick="selectType(this)">
+          <span class="type-em">🍼</span>Thôi nôi
+        </div>
+        <div class="type-opt" data-type="day_thang" onclick="selectType(this)">
+          <span class="type-em">🌸</span>Đầy tháng
+        </div>
+        <div class="type-opt" data-type="dam_gio" onclick="selectType(this)">
+          <span class="type-em">🕯️</span>Đám giỗ
+        </div>
+        <div class="type-opt" data-type="birthday" onclick="selectType(this)">
+          <span class="type-em">🎂</span>Sinh nhật
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tên sự kiện *</label>
+      <input id="ev-name" type="text" class="form-input" placeholder="Tiệc cưới Lan & Minh"/>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ngày tổ chức</label>
+        <input id="ev-date" type="date" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Giờ</label>
+        <input id="ev-time" type="time" class="form-input"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Địa điểm</label>
+      <input id="ev-location" type="text" class="form-input" placeholder="Nhà hàng Hoa Sen, Q.1 TP.HCM"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Lời nhắn / Mô tả</label>
+      <textarea id="ev-desc" class="form-input" placeholder="Trân trọng kính mời..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Số người mỗi bàn</label>
+      <input id="ev-pertable" type="number" min="1" max="30" value="8" class="form-input" style="width:100px"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ảnh sự kiện</label>
+      <!-- Upload area -->
+      <div class="img-upload-area" id="upload-area" onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleDrop(event)">
+        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)"/>
+        <div id="upload-placeholder">
+          <div style="font-size:28px;margin-bottom:6px">📷</div>
+          <div style="font-size:13px;color:var(--muted)">Kéo thả hoặc bấm để upload ảnh</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG, WEBP — tối đa 5MB</div>
+        </div>
+        <img id="upload-preview" class="hidden" alt="preview"/>
+      </div>
+      <!-- Preset images -->
+      <div style="font-size:12px;color:var(--muted);margin:10px 0 6px">Hoặc chọn ảnh mẫu:</div>
+      <div class="img-presets" id="img-presets"></div>
+    </div>
+
+    <input type="hidden" id="ev-id"/>
+    <input type="hidden" id="ev-image-url" value=""/>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-event')">Huỷ</button>
+      <button class="btn btn-primary" onclick="saveEvent()" id="btn-save-event">
+        Tạo sự kiện
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const SUPA_URL = 'https://zvpxvikwhcryeniquexp.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cHh2aWt3aGNyeWVuaXF1ZXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTUwMzksImV4cCI6MjA5NzA3MTAzOX0.aG5geshWV650mmipq_7FyxI1mqESuZ1VBsYTQSqTRxI';
+const RSVP_BASE = window.location.href.replace('index.html','').replace(/\/$/, '') + '/rsvp.html';
+const PER_TABLE_DEFAULT = 8;
+
+const PARTY_TYPES = {
+  wedding:  { label:'Đám cưới',  emoji:'💍', theme:'wedding',  color:'#d4af7a' },
+  thoi_noi: { label:'Thôi nôi',  emoji:'🍼', theme:'thoi_noi', color:'#5cb8a0' },
+  day_thang:{ label:'Đầy tháng', emoji:'🌸', theme:'day_thang',color:'#d98fa0' },
+  dam_gio:  { label:'Đám giỗ',   emoji:'🕯️', theme:'dam_gio',  color:'#a0a8b8' },
+  birthday: { label:'Sinh nhật', emoji:'🎂', theme:'birthday', color:'#9b7fe8' },
 };
 
-let attending=true;
-let extraCount=0;
-let currentEvent=null;
+// Preset images per party type (Unsplash)
+const PRESETS = {
+  wedding:  ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&q=70','https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&q=70','https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&q=70'],
+  thoi_noi: ['https://images.unsplash.com/photo-1519689680058-324335c77eba?w=400&q=70','https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&q=70','https://images.unsplash.com/photo-1578496479914-7ef3b0af9f5d?w=400&q=70'],
+  day_thang:['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=70','https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&q=70','https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=400&q=70'],
+  dam_gio:  ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=70','https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&q=70','https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=70'],
+  birthday: ['https://images.unsplash.com/photo-1558636508-e0969431e37d?w=400&q=70','https://images.unsplash.com/photo-1464349153735-7db50ed83c84?w=400&q=70','https://images.unsplash.com/photo-1513151233558-d860c5398176?w=400&q=70'],
+};
 
-async function init(){
-  const params=new URLSearchParams(window.location.search);
-  const eventId=params.get('event');
-  if(!eventId){showError('Không có event ID trong URL.');return;}
+// ── Supabase init ─────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
 
-  try {
-    const{data,error}=await sb.from('events').select('*').eq('id',eventId).single();
-    if(error){showError('Supabase error: '+error.message+' | code: '+error.code);return;}
-    if(!data){showError('Không tìm thấy sự kiện với ID: '+eventId);return;}
-    currentEvent=data;
-    renderEvent(data);
-  } catch(e){
-    showError('Exception: '+e.message);
-  }
-}
+// ── State ─────────────────────────────────────────────────────
+let currentUser = null;
+let currentEvents = [];
+let currentType = 'wedding';
+let editingEventId = null;
+let uploadedImageUrl = '';
+let realtimeChannel = null;
 
-function renderEvent(ev){
-  const t=PARTY_TYPES[ev.type]||PARTY_TYPES.wedding;
-  document.body.setAttribute('data-theme',t.theme);
-  document.title=`${ev.name} — LễTiệc`;
-
-  // Hero
-  if(ev.image_url){
-    const img=document.createElement('img');
-    img.src=ev.image_url;img.className='hero-img';img.alt='';
-    document.getElementById('hero-fallback').replaceWith(img);
+// ── Auth ──────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    showApp();
   } else {
-    document.getElementById('hero-fallback').textContent=t.emoji;
+    document.getElementById('auth-screen').classList.remove('hidden');
   }
-
-  document.getElementById('ev-name-display').textContent=ev.name;
-  const meta=[];
-  if(ev.date){
-    const d=new Date(ev.date+'T00:00:00');
-    meta.push('📅 '+d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})+(ev.time?' · '+ev.time:''));
-  }
-  if(ev.location) meta.push('📍 '+ev.location);
-  document.getElementById('ev-meta-display').innerHTML=meta.map(m=>`<span>${m}</span>`).join('');
-
-  if(ev.description){
-    const dw=document.getElementById('ev-desc-wrap');
-    dw.textContent=ev.description;
-    dw.classList.remove('hidden');
-  }
-
-  document.getElementById('loading-state').classList.add('hidden');
-  document.getElementById('error-state').classList.add('hidden');
-  document.getElementById('content').classList.remove('hidden');
-}
-
-function showError(msg){
-  document.getElementById('loading-state').classList.add('hidden');
-  const el=document.getElementById('error-state');
-  el.classList.remove('hidden');
-  if(msg) el.innerHTML+=`<p style="margin-top:12px;font-size:12px;color:#f87171;font-family:monospace;word-break:break-all;max-width:400px;margin:12px auto 0">${msg}</p>`;
-}
-
-function setAttend(val){
-  attending=val;
-  document.getElementById('btn-yes').className='attend-btn'+(val?' selected-yes':'');
-  document.getElementById('btn-no').className='attend-btn'+(!val?' selected-no':'');
-  document.getElementById('extra-wrap').style.display=val?'':'none';
-  const btn=document.getElementById('btn-submit');
-  btn.textContent=val?`✅ Xác nhận — ${1+extraCount} người`:'📩 Gửi phản hồi';
-}
-
-function changeExtra(delta){
-  extraCount=Math.max(0,extraCount+delta);
-  document.getElementById('extra-val').textContent=extraCount;
-  if(attending){
-    document.getElementById('btn-submit').textContent=`✅ Xác nhận — ${1+extraCount} người`;
-  }
-}
-
-async function submitRSVP(){
-  const name=document.getElementById('g-name').value.trim();
-  if(!name){alert('Vui lòng nhập tên của bạn.');return;}
-  const btn=document.getElementById('btn-submit');
-  btn.disabled=true;btn.textContent='Đang gửi...';
-
-  const{error}=await sb.from('guests').insert({
-    event_id:currentEvent.id,
-    name,
-    phone:document.getElementById('g-phone').value.trim()||null,
-    extra_count:attending?extraCount:0,
-    attend:attending,
-    note:document.getElementById('g-note').value.trim()||null,
+  sb.auth.onAuthStateChange((_,session) => {
+    if (session) { currentUser = session.user; showApp(); }
+    else showAuth();
   });
+}
 
-  if(error){
-    btn.disabled=false;
-    setAttend(attending);
-    alert('Có lỗi xảy ra: '+error.message);
+function showAuth(){
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+function showApp(){
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  const email = currentUser.email || '';
+  const name = currentUser.user_metadata?.full_name || email.split('@')[0] || 'Người dùng';
+  document.getElementById('user-name-display').textContent = name;
+  document.getElementById('user-email-display').textContent = email;
+  document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
+  loadEvents();
+}
+
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>{
+    t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register'));
+  });
+  document.getElementById('auth-login').classList.toggle('hidden', tab!=='login');
+  document.getElementById('auth-register').classList.toggle('hidden', tab!=='register');
+  document.getElementById('auth-msg').textContent='';
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!email||!pass){setAuthMsg('Vui lòng điền đầy đủ thông tin.');return;}
+  const{error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error) setAuthMsg(error.message);
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  if(!name||!email||!pass){setAuthMsg('Vui lòng điền đầy đủ thông tin.');return;}
+  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error) setAuthMsg(error.message);
+  else setAuthMsg('✅ Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.');
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  if(realtimeChannel) sb.removeChannel(realtimeChannel);
+}
+
+function setAuthMsg(msg){document.getElementById('auth-msg').textContent=msg;}
+
+// ── Navigation ────────────────────────────────────────────────
+function showPage(page){
+  ['events','detail','stats','guide'].forEach(p=>{
+    document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
+  });
+  ['events','stats','guide'].forEach(n=>{
+    const el=document.getElementById('nav-'+n);
+    if(el) el.classList.toggle('active',n===page);
+  });
+  const titles={events:'Sự kiện của tôi',detail:'Chi tiết sự kiện',stats:'Thống kê',guide:'Hướng dẫn'};
+  document.getElementById('topbar-title').textContent=titles[page]||'';
+  const actions=document.getElementById('topbar-actions');
+  actions.innerHTML=page==='events'?'<button class="btn btn-primary" onclick="openCreateModal()"><span>＋</span> Tạo sự kiện</button>':'';
+  if(page==='stats') renderStats();
+  closeSidebar();
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+
+// ── Events CRUD ───────────────────────────────────────────────
+async function loadEvents(){
+  document.getElementById('events-loading').classList.remove('hidden');
+  document.getElementById('events-grid').classList.add('hidden');
+  document.getElementById('events-empty').classList.add('hidden');
+
+  const{data,error}=await sb.from('events').select('*')
+    .eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  if(error){toast('Lỗi tải dữ liệu: '+error.message,'error');return;}
+  currentEvents=data||[];
+  document.getElementById('events-loading').classList.add('hidden');
+
+  if(!currentEvents.length){
+    document.getElementById('events-empty').classList.remove('hidden');
     return;
   }
+  document.getElementById('events-grid').classList.remove('hidden');
+  renderEventCards();
+  subscribeRealtime();
+}
 
-  // Show success
-  document.getElementById('rsvp-form').innerHTML=`
-    <div class="success-wrap">
-      <div class="success-em">${attending?'🎉':'💌'}</div>
-      <div class="success-title">${attending?'Đã xác nhận!':'Đã ghi nhận'}</div>
-      <p class="success-sub">
-        ${attending
-          ?`Hẹn gặp <b>${name}</b> và ${extraCount>0?`${extraCount} người`:''}
-            tại <b>${currentEvent.location||'buổi tiệc'}</b>! 🥂<br/><br/>
-            Tổng: <b>${1+extraCount} người</b> từ nhóm của bạn.`
-          :`Cảm ơn <b>${name}</b> đã thông báo. Chúc bạn có dịp tham dự lần sau! 🙏`}
-      </p>
+async function renderEventCards(){
+  const grid=document.getElementById('events-grid');
+  // Fetch guest counts for all events
+  const ids=currentEvents.map(e=>e.id);
+  let guestMap={};
+  if(ids.length){
+    const{data}=await sb.from('guests').select('event_id,attend,extra_count').in('event_id',ids);
+    (data||[]).forEach(g=>{
+      if(!guestMap[g.event_id]) guestMap[g.event_id]={attending:0,declined:0,pax:0};
+      if(g.attend){ guestMap[g.event_id].attending++; guestMap[g.event_id].pax+=1+(g.extra_count||0); }
+      else guestMap[g.event_id].declined++;
+    });
+  }
+  grid.innerHTML=currentEvents.map(ev=>{
+    const t=PARTY_TYPES[ev.type]||PARTY_TYPES.wedding;
+    const g=guestMap[ev.id]||{attending:0,declined:0,pax:0};
+    const tables=g.pax?Math.ceil(g.pax/(ev.per_table||PER_TABLE_DEFAULT)):0;
+    const dateStr=ev.date?new Date(ev.date+'T00:00:00').toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+    return`<div class="event-card" onclick="openDetail('${ev.id}')">
+      <div class="event-card-banner">
+        ${ev.image_url?`<img src="${ev.image_url}" alt="" loading="lazy"/>`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px">${t.emoji}</div>`}
+        <div class="event-type-badge">${t.emoji} ${t.label}</div>
+      </div>
+      <div class="event-card-body">
+        <div class="event-card-name">${ev.name}</div>
+        <div class="event-card-meta">
+          ${dateStr?`<span>📅 ${dateStr}${ev.time?' · '+ev.time:''}</span>`:''}
+          ${ev.location?`<span>📍 ${ev.location}</span>`:''}
+        </div>
+        <div class="event-card-stats">
+          <span class="stat-chip highlight">👥 ${g.pax} khách</span>
+          <span class="stat-chip highlight">🪑 ${tables} bàn</span>
+          <span class="stat-chip">✅ ${g.attending}</span>
+          <span class="stat-chip">❌ ${g.declined}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openDetail(eventId){
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(!ev) return;
+  const t=PARTY_TYPES[ev.type]||PARTY_TYPES.wedding;
+  document.body.setAttribute('data-theme',t.theme);
+  showPage('detail');
+  document.getElementById('topbar-title').textContent=ev.name;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-secondary btn-sm" onclick="openEditModal('${ev.id}')">✏️ Sửa</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev.id}')">🗑️ Xoá</button>`;
+  await renderDetail(ev);
+  subscribeGuestRealtime(eventId);
+}
+
+async function renderDetail(ev){
+  const{data:guests}=await sb.from('guests').select('*')
+    .eq('event_id',ev.id).order('created_at',{ascending:false});
+  const t=PARTY_TYPES[ev.type]||PARTY_TYPES.wedding;
+  const gList=guests||[];
+  const attending=gList.filter(g=>g.attend);
+  const declined=gList.filter(g=>!g.attend);
+  const totalPax=attending.reduce((s,g)=>s+1+(g.extra_count||0),0);
+  const perTable=ev.per_table||PER_TABLE_DEFAULT;
+  const tables=totalPax?Math.ceil(totalPax/perTable):0;
+  const dateStr=ev.date?new Date(ev.date+'T00:00:00').toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}):'';
+  const shareUrl=`${RSVP_BASE}?event=${ev.id}`;
+
+  document.getElementById('detail-content').innerHTML=`
+    <!-- Hero banner -->
+    <div style="border-radius:16px;overflow:hidden;height:200px;margin-bottom:24px;position:relative;background:linear-gradient(135deg,var(--surface),var(--surface2))">
+      ${ev.image_url?`<img src="${ev.image_url}" style="width:100%;height:100%;object-fit:cover" alt=""/>`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:80px">${t.emoji}</div>`}
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent);display:flex;align-items:flex-end;padding:20px">
+        <div>
+          <div style="font-size:12px;color:var(--theme-secondary);font-weight:600;margin-bottom:4px">${t.emoji} ${t.label}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:24px;color:#fff;font-weight:700">${ev.name}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:2px">
+            ${dateStr?dateStr:''}${ev.time?' · '+ev.time:''}${ev.location?' · 📍 '+ev.location:''}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      ${[
+        {icon:'👥',val:totalPax,label:'Tổng số khách'},
+        {icon:'🪑',val:tables,label:'Số bàn cần dọn'},
+        {icon:'✅',val:attending.length,label:'Đã xác nhận'},
+        {icon:'❌',val:declined.length,label:'Từ chối'},
+      ].map(k=>`<div class="kpi-card">
+        <div class="kpi-icon">${k.icon}</div>
+        <div class="kpi-value">${k.val}</div>
+        <div class="kpi-label">${k.label}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Share link + table config -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" class="detail-2col">
+      <div class="card card-sm">
+        <div style="font-size:13px;font-weight:600;color:var(--theme-primary);margin-bottom:10px">🔗 Link mời khách</div>
+        <div class="share-box">
+          <div class="share-url" id="share-url-text">${shareUrl}</div>
+          <button class="btn btn-primary btn-sm" onclick="copyLink('${shareUrl}')">Copy</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Gửi link này cho khách qua Zalo, Messenger, SMS...</div>
+      </div>
+      <div class="card card-sm">
+        <div style="font-size:13px;font-weight:600;color:var(--theme-primary);margin-bottom:10px">🪑 Cài đặt bàn</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" id="per-table-input" value="${perTable}" min="1" max="30"
+            style="width:64px;padding:6px 10px;border-radius:8px;background:var(--surface2);
+              border:1px solid var(--border);color:var(--text);font-size:14px;font-family:inherit;outline:none"/>
+          <span style="font-size:13px;color:var(--muted)">người / bàn</span>
+          <button class="btn btn-secondary btn-sm" onclick="updatePerTable('${ev.id}')">Lưu</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">
+          ${totalPax} khách → <b style="color:var(--theme-secondary)">${tables} bàn</b>
+          ${totalPax%perTable&&totalPax?` (bàn cuối ${totalPax%perTable} người)`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Table layout -->
+    ${tables>0?`<div class="card" style="margin-bottom:24px">
+      <div style="font-size:13px;font-weight:600;color:var(--theme-primary);margin-bottom:14px">🗺️ Sơ đồ bàn ước tính</div>
+      <div class="tables-grid">
+        ${Array.from({length:tables}).map((_,i)=>{
+          const filled=i===tables-1&&totalPax%perTable?totalPax%perTable:perTable;
+          const partial=filled<perTable;
+          return`<div class="table-chip${partial?' t-partial':''}">
+            <div class="t-icon">🪑</div>
+            <div class="t-num">Bàn ${i+1}</div>
+            <div class="t-fill">${filled}/${perTable}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:''}
+
+    <!-- Guest list -->
+    <div class="card">
+      <div class="section-hd" style="margin-bottom:16px">
+        <div>
+          <div class="section-title" style="font-size:16px">Danh sách khách (${gList.length})</div>
+        </div>
+        <input type="text" id="guest-search" class="form-input" placeholder="Tìm tên khách..."
+          style="width:180px;padding:7px 12px;font-size:13px" oninput="filterGuests()"/>
+      </div>
+      <div id="guest-list">
+        ${renderGuestList(gList)}
+      </div>
+    </div>
+  `;
+
+  // Store gList globally for filtering
+  window._currentGuests = gList;
+  // Responsive fix for 2-col
+  if(window.innerWidth<640){
+    const col=document.querySelector('.detail-2col');
+    if(col) col.style.gridTemplateColumns='1fr';
+  }
+}
+
+function renderGuestList(list){
+  if(!list.length) return`<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px">
+    Chưa có khách nào xác nhận. Hãy gửi link mời! 📨</div>`;
+  return list.map(g=>{
+    const initials=g.name.trim().split(' ').map(w=>w[0]).slice(-2).join('').toUpperCase();
+    const color=g.attend?'rgba(52,211,153,.2)':'rgba(248,113,113,.15)';
+    const textColor=g.attend?'#34d399':'#f87171';
+    const date=new Date(g.created_at).toLocaleDateString('vi-VN');
+    return`<div class="guest-item">
+      <div class="guest-avatar" style="background:${color};color:${textColor}">${initials}</div>
+      <div class="guest-info">
+        <div class="guest-name">${g.name}</div>
+        <div class="guest-sub">
+          ${g.attend?`+${g.extra_count} người đi cùng · tổng ${1+(g.extra_count||0)} người`:'Không tham dự'}
+          ${g.phone?` · 📞 ${g.phone}`:''}
+          ${g.note?` · 📝 ${g.note}`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="${g.attend?'badge badge-green':'badge badge-red'}">${g.attend?`✅ ${1+(g.extra_count||0)} người`:'❌ Từ chối'}</span>
+        <span style="font-size:11px;color:var(--muted)">${date}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterGuests(){
+  const q=document.getElementById('guest-search')?.value.toLowerCase()||'';
+  const filtered=(window._currentGuests||[]).filter(g=>g.name.toLowerCase().includes(q));
+  const gl=document.getElementById('guest-list');
+  if(gl) gl.innerHTML=renderGuestList(filtered);
+}
+
+async function updatePerTable(eventId){
+  const val=parseInt(document.getElementById('per-table-input').value)||PER_TABLE_DEFAULT;
+  const{error}=await sb.from('events').update({per_table:val}).eq('id',eventId);
+  if(error){toast('Lỗi cập nhật: '+error.message,'error');return;}
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev){ev.per_table=val;}
+  toast('Đã cập nhật số người/bàn','success');
+  await renderDetail(ev);
+}
+
+async function deleteEvent(eventId){
+  if(!confirm('Xoá sự kiện này? Tất cả danh sách khách cũng sẽ bị xoá.')) return;
+  const{error}=await sb.from('events').delete().eq('id',eventId);
+  if(error){toast('Lỗi xoá: '+error.message,'error');return;}
+  currentEvents=currentEvents.filter(e=>e.id!==eventId);
+  toast('Đã xoá sự kiện','info');
+  showPage('events');
+  renderEventCards();
+}
+
+// ── Realtime ──────────────────────────────────────────────────
+function subscribeRealtime(){
+  if(realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel=sb.channel('events-list')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'guests'},()=>{
+      renderEventCards();
+    }).subscribe();
+}
+
+function subscribeGuestRealtime(eventId){
+  if(realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel=sb.channel('guests-'+eventId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'guests',
+      filter:`event_id=eq.${eventId}`},async(payload)=>{
+      const ev=currentEvents.find(e=>e.id===eventId);
+      if(ev){
+        toast(`🎉 ${payload.new.name} vừa xác nhận tham dự!`,'success');
+        await renderDetail(ev);
+      }
+    }).subscribe();
+}
+
+// ── Create / Edit Modal ───────────────────────────────────────
+function openCreateModal(){
+  editingEventId=null;
+  uploadedImageUrl='';
+  document.getElementById('ev-id').value='';
+  document.getElementById('ev-name').value='';
+  document.getElementById('ev-date').value='';
+  document.getElementById('ev-time').value='';
+  document.getElementById('ev-location').value='';
+  document.getElementById('ev-desc').value='';
+  document.getElementById('ev-pertable').value=PER_TABLE_DEFAULT;
+  document.getElementById('ev-image-url').value='';
+  document.getElementById('upload-preview').classList.add('hidden');
+  document.getElementById('upload-placeholder').classList.remove('hidden');
+  document.getElementById('modal-event-title').textContent='Tạo sự kiện mới';
+  document.getElementById('btn-save-event').textContent='Tạo sự kiện';
+  selectTypeByValue('wedding');
+  openModal('modal-event');
+}
+
+function openEditModal(eventId){
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(!ev) return;
+  editingEventId=eventId;
+  uploadedImageUrl=ev.image_url||'';
+  document.getElementById('ev-id').value=ev.id;
+  document.getElementById('ev-name').value=ev.name;
+  document.getElementById('ev-date').value=ev.date||'';
+  document.getElementById('ev-time').value=ev.time||'';
+  document.getElementById('ev-location').value=ev.location||'';
+  document.getElementById('ev-desc').value=ev.description||'';
+  document.getElementById('ev-pertable').value=ev.per_table||PER_TABLE_DEFAULT;
+  document.getElementById('ev-image-url').value=ev.image_url||'';
+  if(ev.image_url){
+    document.getElementById('upload-preview').src=ev.image_url;
+    document.getElementById('upload-preview').classList.remove('hidden');
+    document.getElementById('upload-placeholder').classList.add('hidden');
+  } else {
+    document.getElementById('upload-preview').classList.add('hidden');
+    document.getElementById('upload-placeholder').classList.remove('hidden');
+  }
+  document.getElementById('modal-event-title').textContent='Sửa sự kiện';
+  document.getElementById('btn-save-event').textContent='Lưu thay đổi';
+  selectTypeByValue(ev.type||'wedding');
+  openModal('modal-event');
+}
+
+function selectType(el){
+  document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  currentType=el.dataset.type;
+  document.body.setAttribute('data-theme',PARTY_TYPES[currentType].theme);
+  renderPresets(currentType);
+}
+
+function selectTypeByValue(type){
+  currentType=type;
+  document.querySelectorAll('.type-opt').forEach(o=>{
+    o.classList.toggle('selected',o.dataset.type===type);
+  });
+  document.body.setAttribute('data-theme',PARTY_TYPES[type].theme);
+  renderPresets(type);
+}
+
+function renderPresets(type){
+  const urls=PRESETS[type]||[];
+  const current=document.getElementById('ev-image-url').value;
+  document.getElementById('img-presets').innerHTML=urls.map(url=>`
+    <div class="img-preset${current===url?' selected':''}" onclick="selectPreset('${url}',this)">
+      <img src="${url}" alt="" loading="lazy"/>
+    </div>`).join('');
+}
+
+function selectPreset(url,el){
+  document.querySelectorAll('.img-preset').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+  uploadedImageUrl=url;
+  document.getElementById('ev-image-url').value=url;
+  document.getElementById('upload-preview').src=url;
+  document.getElementById('upload-preview').classList.remove('hidden');
+  document.getElementById('upload-placeholder').classList.add('hidden');
+}
+
+async function handleFileSelect(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  await uploadImage(file);
+}
+async function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('upload-area').classList.remove('dragover');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/')) await uploadImage(file);
+}
+
+async function uploadImage(file){
+  if(file.size>5*1024*1024){toast('Ảnh tối đa 5MB','error');return;}
+  const ext=file.name.split('.').pop();
+  const path=`${currentUser.id}/${Date.now()}.${ext}`;
+  const{error}=await sb.storage.from('event-images').upload(path,file,{upsert:true});
+  if(error){toast('Lỗi upload: '+error.message,'error');return;}
+  const{data}=sb.storage.from('event-images').getPublicUrl(path);
+  uploadedImageUrl=data.publicUrl;
+  document.getElementById('ev-image-url').value=uploadedImageUrl;
+  document.getElementById('upload-preview').src=uploadedImageUrl;
+  document.getElementById('upload-preview').classList.remove('hidden');
+  document.getElementById('upload-placeholder').classList.add('hidden');
+  toast('Upload ảnh thành công!','success');
+}
+
+async function saveEvent(){
+  const name=document.getElementById('ev-name').value.trim();
+  if(!name){toast('Vui lòng nhập tên sự kiện','error');return;}
+  const payload={
+    name,type:currentType,
+    date:document.getElementById('ev-date').value||null,
+    time:document.getElementById('ev-time').value||null,
+    location:document.getElementById('ev-location').value.trim()||null,
+    description:document.getElementById('ev-desc').value.trim()||null,
+    per_table:parseInt(document.getElementById('ev-pertable').value)||PER_TABLE_DEFAULT,
+    image_url:document.getElementById('ev-image-url').value||null,
+  };
+
+  if(editingEventId){
+    const{error}=await sb.from('events').update(payload).eq('id',editingEventId);
+    if(error){toast('Lỗi cập nhật: '+error.message,'error');return;}
+    const idx=currentEvents.findIndex(e=>e.id===editingEventId);
+    if(idx>=0) currentEvents[idx]={...currentEvents[idx],...payload};
+    toast('Đã cập nhật sự kiện','success');
+  } else {
+    const{data,error}=await sb.from('events').insert({...payload,user_id:currentUser.id}).select().single();
+    if(error){toast('Lỗi tạo sự kiện: '+error.message,'error');return;}
+    currentEvents.unshift(data);
+    toast('Đã tạo sự kiện mới 🎉','success');
+  }
+  closeModal('modal-event');
+  document.getElementById('events-empty').classList.add('hidden');
+  document.getElementById('events-grid').classList.remove('hidden');
+  renderEventCards();
+}
+
+// ── Stats Page ────────────────────────────────────────────────
+async function renderStats(){
+  const el=document.getElementById('stats-content');
+  el.innerHTML=`<div style="text-align:center;padding:40px"><div style="display:inline-flex;gap:6px"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div></div>`;
+  const ids=currentEvents.map(e=>e.id);
+  let totalGuests=0,totalPax=0,totalTables=0;
+  if(ids.length){
+    const{data}=await sb.from('guests').select('event_id,attend,extra_count').in('event_id',ids);
+    const list=data||[];
+    totalGuests=list.filter(g=>g.attend).length;
+    totalPax=list.filter(g=>g.attend).reduce((s,g)=>s+1+(g.extra_count||0),0);
+    currentEvents.forEach(ev=>{
+      const evPax=list.filter(g=>g.event_id===ev.id&&g.attend).reduce((s,g)=>s+1+(g.extra_count||0),0);
+      totalTables+=evPax?Math.ceil(evPax/(ev.per_table||PER_TABLE_DEFAULT)):0;
+    });
+  }
+  el.innerHTML=`
+    <div class="kpi-grid" style="margin-bottom:28px">
+      ${[
+        {icon:'🎊',val:currentEvents.length,label:'Sự kiện'},
+        {icon:'👥',val:totalPax,label:'Tổng khách'},
+        {icon:'✅',val:totalGuests,label:'Xác nhận'},
+        {icon:'🪑',val:totalTables,label:'Tổng bàn'},
+      ].map(k=>`<div class="kpi-card"><div class="kpi-icon">${k.icon}</div>
+        <div class="kpi-value">${k.val}</div><div class="kpi-label">${k.label}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-bottom:16px">Theo loại tiệc</div>
+      ${Object.entries(PARTY_TYPES).map(([type,t])=>{
+        const count=currentEvents.filter(e=>e.type===type).length;
+        return`<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <span style="font-size:20px">${t.emoji}</span>
+          <span style="flex:1;font-size:14px;color:var(--text)">${t.label}</span>
+          <span class="badge badge-blue">${count} sự kiện</span>
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
-setAttend(true);
+// ── Helpers ───────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function copyLink(url){
+  navigator.clipboard.writeText(url).then(()=>toast('✅ Đã sao chép link mời!','success'));
+}
+function toast(msg,type='info'){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o) o.classList.remove('open')});
+});
+
+// Init
 init();
 </script>
 </body>
