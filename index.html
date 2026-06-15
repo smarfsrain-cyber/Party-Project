@@ -291,6 +291,56 @@ select.form-input option{background:var(--surface2)}
 .share-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
 .share-url{flex:1;font-size:11px;color:var(--muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 
+/* ── Detail Tabs ── */
+.detail-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:24px;overflow-x:auto}
+.detail-tab{flex:1;min-width:80px;padding:8px 12px;border-radius:9px;border:none;background:none;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit;white-space:nowrap;text-align:center}
+.detail-tab.active{background:var(--theme-glow);color:var(--theme-primary)}
+.detail-tab-content{display:none}
+.detail-tab-content.active{display:block}
+
+/* ── Budget bar ── */
+.budget-bar-wrap{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;margin:10px 0}
+.budget-bar{height:100%;border-radius:99px;transition:width .6s ease;background:linear-gradient(90deg,var(--theme-primary),var(--theme-secondary))}
+.budget-bar.over{background:linear-gradient(90deg,#f87171,#fca5a5)}
+
+/* ── Expense table ── */
+.exp-table{width:100%;border-collapse:collapse}
+.exp-table th{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.exp-table td{padding:10px;font-size:13px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.exp-table tr:last-child td{border-bottom:none}
+.exp-table tr:hover td{background:rgba(255,255,255,.02)}
+.cat-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+
+/* ── Quick add chips ── */
+.quick-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.quick-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);font-size:12px;color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit}
+.quick-chip:hover{border-color:var(--theme-primary);color:var(--theme-primary)}
+
+/* ── Envelope table ── */
+.env-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px;flex-wrap:wrap}
+.side-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.side-dot.groom{background:#60a5fa}
+.side-dot.bride{background:#f472b6}
+.env-name{font-size:14px;font-weight:600;color:var(--text);flex:1;min-width:100px}
+.env-amounts{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.env-amt{font-size:13px}
+.env-amt.expected{color:var(--muted)}
+.env-amt.actual{color:var(--theme-primary);font-weight:600}
+.env-filter-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.env-ftab{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .2s}
+.env-ftab.active{border-color:var(--theme-primary);color:var(--theme-primary);background:var(--theme-glow)}
+
+/* ── Summary cards ── */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.sum-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.sum-val{font-size:16px;font-weight:800;color:var(--theme-primary);font-family:'Playfair Display',serif;line-height:1.2}
+.sum-label{font-size:11px;color:var(--muted);margin-top:3px}
+
+@media(max-width:768px){
+  .exp-table th:nth-child(4),.exp-table td:nth-child(4){display:none}
+  .detail-tab{font-size:12px;padding:7px 8px}
+}
+
 /* ── Empty state ── */
 .empty-state{text-align:center;padding:80px 24px}
 .empty-state .em{font-size:56px;margin-bottom:16px}
@@ -820,6 +870,12 @@ async function openDetail(eventId){
   subscribeGuestRealtime(eventId);
 }
 
+// ── Tab switching ──────────────────────────────────────────
+function switchDetailTab(tab){
+  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.detail-tab-content').forEach(c=>c.classList.toggle('active',c.id==='tab-'+tab));
+}
+
 async function renderDetail(ev){
   const{data:guests}=await sb.from('guests').select('*')
     .eq('event_id',ev.id).order('created_at',{ascending:false});
@@ -832,6 +888,14 @@ async function renderDetail(ev){
   const tables=totalPax?Math.ceil(totalPax/perTable):0;
   const dateStr=ev.date?new Date(ev.date+'T00:00:00').toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}):'';
   const shareUrl=`${RSVP_BASE}?event=${ev.id}`;
+
+  // Load expenses + envelopes song song
+  const[{data:expData},{data:envData}]=await Promise.all([
+    sb.from('expenses').select('*').eq('event_id',ev.id).order('created_at'),
+    ev.type==='wedding'?sb.from('envelopes').select('*').eq('event_id',ev.id).order('created_at'):Promise.resolve({data:[]}),
+  ]);
+  const expenses=expData||[];
+  const envelopes=envData||[];
 
   document.getElementById('detail-content').innerHTML=`
     <!-- Hero banner -->
@@ -905,23 +969,41 @@ async function renderDetail(ev){
       </div>
     </div>`:''}
 
-    <!-- Guest list -->
-    <div class="card">
-      <div class="section-hd" style="margin-bottom:16px">
-        <div>
-          <div class="section-title" style="font-size:16px">Danh sách khách (${gList.length})</div>
+    <!-- Tabs -->
+    <div class="detail-tabs">
+      <button class="detail-tab active" data-tab="guests" onclick="switchDetailTab('guests')">👥 Khách (${gList.length})</button>
+      <button class="detail-tab" data-tab="expenses" onclick="switchDetailTab('expenses')">💰 Chi phí</button>
+      ${ev.type==='wedding'?`<button class="detail-tab" data-tab="envelopes" onclick="switchDetailTab('envelopes')">💌 Phong bì</button>`:''}
+    </div>
+
+    <!-- Tab: Khách -->
+    <div class="detail-tab-content active" id="tab-guests">
+      <div class="card">
+        <div class="section-hd" style="margin-bottom:16px">
+          <div><div class="section-title" style="font-size:16px">Danh sách khách</div></div>
+          <input type="text" id="guest-search" class="form-input" placeholder="Tìm tên khách..."
+            style="width:clamp(120px,40vw,180px);padding:7px 12px;font-size:13px" oninput="filterGuests()"/>
         </div>
-        <input type="text" id="guest-search" class="form-input" placeholder="Tìm tên khách..."
-          style="width:clamp(120px,40vw,180px);padding:7px 12px;font-size:13px" oninput="filterGuests()"/>
-      </div>
-      <div id="guest-list">
-        ${renderGuestList(gList)}
+        <div id="guest-list">${renderGuestList(gList)}</div>
       </div>
     </div>
+
+    <!-- Tab: Chi phí -->
+    <div class="detail-tab-content" id="tab-expenses">
+      ${renderExpensesHTML(ev, expenses, totalPax, tables)}
+    </div>
+
+    ${ev.type==='wedding'?`
+    <!-- Tab: Phong bì -->
+    <div class="detail-tab-content" id="tab-envelopes">
+      ${renderEnvelopesHTML(ev, envelopes, expenses)}
+    </div>`:''}
   `;
 
   // Store gList globally for filtering
   window._currentGuests = gList;
+  window._envAll = envelopes||[];
+  window._currentExpenses = expenses||[];
   // responsive handled by CSS
 }
 
@@ -949,6 +1031,154 @@ function renderGuestList(list){
       </div>
     </div>`;
   }).join('');
+}
+
+// ── EXPENSE HELPERS ──────────────────────────────────────────
+const CAT_COLORS={food:'rgba(251,191,36,.15)',decor:'rgba(167,139,250,.15)',music:'rgba(96,165,250,.15)',photo:'rgba(52,211,153,.15)',transport:'rgba(251,146,60,.15)',venue:'rgba(244,114,182,.15)',gift:'rgba(34,211,238,.15)',other:'rgba(148,163,184,.15)'};
+const CAT_TEXT={food:'#fbbf24',decor:'#a78bfa',music:'#60a5fa',photo:'#34d399',transport:'#fb923c',venue:'#f472b6',gift:'#22d3ee',other:'#94a3b8'};
+const CAT_LABEL={food:'🍽️ Thực đơn',decor:'🌸 Trang trí',music:'🎵 Âm nhạc',photo:'📷 Ảnh/Video',transport:'🚗 Di chuyển',venue:'🏛️ Địa điểm',gift:'🎁 Quà tặng',other:'📦 Khác'};
+
+const QUICK_SUGGESTIONS={
+  wedding:['🍽️ Thực đơn/bàn|food','🌸 Hoa tươi|decor','🎵 Nhạc & MC|music','📷 Chụp ảnh|photo','🚗 Xe hoa|transport','🏛️ Phòng tiệc|venue','💄 Trang điểm|other','🎂 Bánh cưới|food'],
+  thoi_noi:['🍽️ Thực đơn/bàn|food','🌸 Trang trí|decor','🎵 Âm nhạc|music','📷 Chụp ảnh|photo','🎂 Bánh thôi nôi|food','🎁 Quà|gift'],
+  day_thang:['🍽️ Thực đơn/bàn|food','🌸 Trang trí|decor','🎂 Bánh đầy tháng|food','📷 Chụp ảnh|photo','🎁 Quà|gift'],
+  dam_gio:['🍽️ Thực đơn/bàn|food','🌺 Hoa & nhang|decor','🏛️ Địa điểm|venue'],
+  birthday:['🍽️ Thực đơn/bàn|food','🎂 Bánh sinh nhật|food','🌸 Trang trí|decor','🎵 Âm nhạc|music','📷 Chụp ảnh|photo','🎁 Quà|gift'],
+};
+
+function fmtVND(n){if(!n&&n!==0)return'—';return new Intl.NumberFormat('vi-VN').format(n)+'đ';}
+function calcExpAmt(e, totalTables, totalPax){
+  let qty=e.quantity;
+  if(e.qty_auto==='tables') qty=totalTables||e.quantity;
+  if(e.qty_auto==='guests') qty=totalPax||e.quantity;
+  return Math.round(e.unit_price*(qty||1));
+}
+
+function renderExpensesHTML(ev, expenses, totalPax, tables){
+  const budget=ev.budget||0;
+  const totalExp=expenses.reduce((s,e)=>s+calcExpAmt(e,tables,totalPax),0);
+  const pct=budget?Math.min(Math.round(totalExp/budget*100),999):0;
+  const perPax=totalPax?Math.round(totalExp/totalPax):0;
+  const perTable=tables?Math.round(totalExp/tables):0;
+  const suggestions=(QUICK_SUGGESTIONS[ev.type]||QUICK_SUGGESTIONS.wedding);
+
+  return`<div class="card" style="margin-bottom:16px">
+    <!-- Budget -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600;color:var(--theme-primary)">💰 Ngân sách dự kiến</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="budget-input" value="${budget||''}" placeholder="0"
+          style="width:140px;padding:6px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;outline:none;text-align:right"/>
+        <span style="font-size:12px;color:var(--muted)">đ</span>
+        <button class="btn btn-secondary btn-sm" onclick="saveBudget('${ev.id}')">Lưu</button>
+      </div>
+    </div>
+    ${budget?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Đã dùng: <b style="color:${pct>100?'#f87171':'var(--theme-primary)'}">${fmtVND(totalExp)}</b> / ${fmtVND(budget)} (${pct}%)</div>
+    <div class="budget-bar-wrap"><div class="budget-bar${pct>100?' over':''}" style="width:${Math.min(pct,100)}%"></div></div>`:''}
+  </div>
+
+  <!-- Summary -->
+  <div class="sum-grid" style="margin-bottom:16px">
+    <div class="sum-card"><div class="sum-val">${fmtVND(totalExp)}</div><div class="sum-label">Tổng chi phí</div></div>
+    <div class="sum-card"><div class="sum-val">${perPax?fmtVND(perPax):'—'}</div><div class="sum-label">/ khách</div></div>
+    <div class="sum-card"><div class="sum-val">${perTable?fmtVND(perTable):'—'}</div><div class="sum-label">/ bàn</div></div>
+  </div>
+
+  <!-- Quick add -->
+  <div style="margin-bottom:12px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Thêm nhanh:</div>
+    <div class="quick-chips">
+      ${suggestions.map(s=>{const[label,cat]=s.split('|');return`<button class="quick-chip" onclick="quickAddExpense('${ev.id}','${cat}','${label.replace(/'/g,"\'")}',${tables},${totalPax})">${label}</button>`;}).join('')}
+      <button class="quick-chip" style="border-color:var(--theme-primary);color:var(--theme-primary)" onclick="openExpenseModal('${ev.id}',null,${tables},${totalPax})">＋ Tuỳ chỉnh</button>
+    </div>
+  </div>
+
+  <!-- Expense list -->
+  <div class="card" style="padding:0;overflow:hidden">
+    ${expenses.length===0?`<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px">Chưa có khoản chi nào. Thêm nhanh ở trên!</div>`:`
+    <div style="overflow-x:auto">
+    <table class="exp-table">
+      <thead><tr>
+        <th>Hạng mục</th><th>Tên</th><th>Đơn giá</th><th>Số lượng</th><th>Thành tiền</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${expenses.map(e=>{
+          const amt=calcExpAmt(e,tables,totalPax);
+          const qtyLabel=e.qty_auto==='tables'?`🔗${tables} bàn`:e.qty_auto==='guests'?`🔗${totalPax} khách`:e.quantity;
+          return`<tr>
+            <td><span class="cat-badge" style="background:${CAT_COLORS[e.category]||CAT_COLORS.other};color:${CAT_TEXT[e.category]||CAT_TEXT.other}">${CAT_LABEL[e.category]||'📦 Khác'}</span></td>
+            <td>${e.name}${e.note?`<div style="font-size:11px;color:var(--muted)">${e.note}</div>`:''}</td>
+            <td style="white-space:nowrap">${fmtVND(e.unit_price)}</td>
+            <td style="white-space:nowrap">${qtyLabel}</td>
+            <td style="white-space:nowrap;font-weight:600;color:var(--theme-primary)">${fmtVND(amt)}</td>
+            <td style="white-space:nowrap">
+              <button class="btn-ghost" style="padding:4px 8px;font-size:16px" onclick="openExpenseModal('${ev.id}','${e.id}',${tables},${totalPax})">✏️</button>
+              <button class="btn-ghost" style="padding:4px 8px;font-size:16px;color:#f87171" onclick="deleteExpense('${e.id}','${ev.id}')">🗑️</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>`}
+  </div>`;
+}
+
+// ── ENVELOPE HELPERS ──────────────────────────────────────────
+function renderEnvelopesHTML(ev, envelopes, expenses){
+  const groomList=envelopes.filter(e=>e.side==='groom');
+  const brideList=envelopes.filter(e=>e.side==='bride');
+  const totalActual=envelopes.reduce((s,e)=>s+(e.amount_actual||0),0);
+  const groomActual=groomList.reduce((s,e)=>s+(e.amount_actual||0),0);
+  const brideActual=brideList.reduce((s,e)=>s+(e.amount_actual||0),0);
+  const totalExp2=expenses?expenses.reduce((s,e)=>s+calcExpAmt(e,0,0),0):0;
+  const balance=totalActual-totalExp2;
+
+  return`<!-- Summary -->
+  <div class="sum-grid" style="margin-bottom:16px">
+    <div class="sum-card"><div class="sum-val" style="color:#60a5fa">${fmtVND(groomActual)}</div><div class="sum-label">💙 Nhà trai</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:#f472b6">${fmtVND(brideActual)}</div><div class="sum-label">🩷 Nhà gái</div></div>
+    <div class="sum-card"><div class="sum-val">${fmtVND(totalActual)}</div><div class="sum-label">Tổng thu</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:${balance>=0?'#34d399':'#f87171'}">${balance>=0?'+':''}${fmtVND(balance)}</div><div class="sum-label">${balance>=0?'✅ Lãi':'❌ Lỗ'}</div></div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div class="env-filter-tabs">
+      <button class="env-ftab active" onclick="filterEnv(this,'all')">Tất cả (${envelopes.length})</button>
+      <button class="env-ftab" onclick="filterEnv(this,'groom')">💙 Nhà trai (${groomList.length})</button>
+      <button class="env-ftab" onclick="filterEnv(this,'bride')">🩷 Nhà gái (${brideList.length})</button>
+      <button class="env-ftab" onclick="filterEnv(this,'missing')">⏳ Chưa nhập</button>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openEnvModal('${ev.id}',null)">＋ Thêm</button>
+  </div>
+
+  <div id="env-list">
+    ${renderEnvList(envelopes,'all')}
+  </div>`;
+}
+
+function renderEnvList(list, filter){
+  let filtered=list;
+  if(filter==='groom') filtered=list.filter(e=>e.side==='groom');
+  else if(filter==='bride') filtered=list.filter(e=>e.side==='bride');
+  else if(filter==='missing') filtered=list.filter(e=>!e.amount_actual);
+  if(!filtered.length) return`<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px">Chưa có dữ liệu</div>`;
+  return filtered.map(e=>`
+    <div class="env-item">
+      <div class="side-dot ${e.side}"></div>
+      <div class="env-name">${e.name}${e.note?`<div style="font-size:11px;color:var(--muted)">${e.note}</div>`:''}</div>
+      <div class="env-amounts">
+        ${e.amount_expected?`<span class="env-amt expected">Dự kiến: ${fmtVND(e.amount_expected)}</span>`:''}
+        <span class="env-amt actual">${e.amount_actual?fmtVND(e.amount_actual):'⏳ Chưa nhập'}</span>
+      </div>
+      <button class="btn-ghost" style="font-size:15px;padding:4px 8px" onclick="openEnvModal('${e.event_id}','${e.id}')">✏️</button>
+    </div>`).join('');
+}
+
+window._envAll=[];
+function filterEnv(el, filter){
+  document.querySelectorAll('.env-ftab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('env-list').innerHTML=renderEnvList(window._envAll,filter);
 }
 
 function filterGuests(){
@@ -1141,7 +1371,234 @@ async function saveEvent(){
   renderEventCards();
 }
 
-// ── Stats Page ────────────────────────────────────────────────
+// ── EXPENSE CRUD ─────────────────────────────────────────────
+let _expModal={eventId:null,expId:null,tables:0,pax:0};
+
+function openExpenseModal(eventId, expId, tables, pax){
+  _expModal={eventId,expId,tables,pax};
+  const isEdit=!!expId;
+  // Tìm expense nếu edit
+  let exp=null;
+  if(isEdit){
+    // Tìm trong DOM table
+    exp=window._currentExpenses?.find(e=>e.id===expId);
+  }
+  const html=`
+    <div class="modal-overlay open" id="modal-expense">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">${isEdit?'Sửa khoản chi':'Thêm khoản chi'}</div>
+          <button class="modal-close" onclick="document.getElementById('modal-expense').remove()">✕</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Danh mục</label>
+          <select id="exp-cat" class="form-input">
+            ${Object.entries(CAT_LABEL).map(([k,v])=>`<option value="${k}"${exp?.category===k?' selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên khoản chi *</label>
+          <input id="exp-name" class="form-input" value="${exp?.name||''}" placeholder="VD: Thực đơn mỗi bàn"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Đơn giá (đ)</label>
+            <input id="exp-price" type="number" class="form-input" value="${exp?.unit_price||''}" placeholder="0"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Số lượng</label>
+            <input id="exp-qty" type="number" class="form-input" value="${exp?.qty_auto?'':exp?.quantity||1}" placeholder="1" ${exp?.qty_auto?'disabled':''}/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tự động theo</label>
+          <select id="exp-auto" class="form-input" onchange="toggleQtyAuto(this)">
+            <option value="" ${!exp?.qty_auto?'selected':''}>Nhập tay</option>
+            <option value="tables" ${exp?.qty_auto==='tables'?'selected':''}>🔗 Số bàn (${tables} bàn)</option>
+            <option value="guests" ${exp?.qty_auto==='guests'?'selected':''}>🔗 Số khách (${pax} người)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú</label>
+          <input id="exp-note" class="form-input" value="${exp?.note||''}" placeholder="Tuỳ chọn"/>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-expense').remove()">Huỷ</button>
+          <button class="btn btn-primary" onclick="saveExpense()">💾 Lưu</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function toggleQtyAuto(sel){
+  const qtyInput=document.getElementById('exp-qty');
+  qtyInput.disabled=!!sel.value;
+  if(sel.value==='tables') qtyInput.value=_expModal.tables;
+  else if(sel.value==='guests') qtyInput.value=_expModal.pax;
+  else qtyInput.value=1;
+}
+
+async function quickAddExpense(eventId, cat, name, tables, pax){
+  _expModal={eventId,expId:null,tables,pax};
+  // pre-fill modal với gợi ý
+  openExpenseModal(eventId, null, tables, pax);
+  setTimeout(()=>{
+    document.getElementById('exp-cat').value=cat;
+    document.getElementById('exp-name').value=name.replace(/[🍽️🌸🎵📷🚗🏛️💄🎂🎁🌺]/gu,'').trim();
+    // Nếu tên có "bàn" thì auto = tables
+    if(name.includes('bàn')||name.includes('/bàn')){
+      document.getElementById('exp-auto').value='tables';
+      toggleQtyAuto(document.getElementById('exp-auto'));
+    }
+  },50);
+}
+
+async function saveExpense(){
+  const name=document.getElementById('exp-name').value.trim();
+  if(!name){alert('Vui lòng nhập tên khoản chi.');return;}
+  const autoVal=document.getElementById('exp-auto').value;
+  const payload={
+    event_id:_expModal.eventId,
+    category:document.getElementById('exp-cat').value,
+    name,
+    unit_price:parseInt(document.getElementById('exp-price').value)||0,
+    quantity:parseFloat(document.getElementById('exp-qty').value)||1,
+    qty_auto:autoVal||null,
+    note:document.getElementById('exp-note').value.trim()||null,
+  };
+  let error;
+  if(_expModal.expId){
+    ({error}=await sb.from('expenses').update(payload).eq('id',_expModal.expId));
+  } else {
+    ({error}=await sb.from('expenses').insert(payload));
+  }
+  if(error){toast('Lỗi: '+error.message,'error');return;}
+  document.getElementById('modal-expense').remove();
+  toast(_expModal.expId?'Đã cập nhật khoản chi':'Đã thêm khoản chi','success');
+  const ev=currentEvents.find(e=>e.id===_expModal.eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('expenses');
+}
+
+async function deleteExpense(expId, eventId){
+  if(!confirm('Xoá khoản chi này?')) return;
+  const{error}=await sb.from('expenses').delete().eq('id',expId);
+  if(error){toast('Lỗi xoá: '+error.message,'error');return;}
+  toast('Đã xoá','info');
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('expenses');
+}
+
+async function saveBudget(eventId){
+  const val=parseInt(document.getElementById('budget-input').value)||null;
+  const{error}=await sb.from('events').update({budget:val}).eq('id',eventId);
+  if(error){toast('Lỗi: '+error.message,'error');return;}
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev){ev.budget=val;}
+  toast('Đã lưu ngân sách','success');
+  await renderDetail(ev);
+  switchDetailTab('expenses');
+}
+
+// ── ENVELOPE CRUD ─────────────────────────────────────────────
+let _envModal={eventId:null,envId:null};
+
+function openEnvModal(eventId, envId){
+  _envModal={eventId,envId};
+  const env=envId?window._envAll?.find(e=>e.id===envId):null;
+  const html=`
+    <div class="modal-overlay open" id="modal-envelope">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">${env?'Sửa phong bì':'Thêm phong bì'}</div>
+          <button class="modal-close" onclick="document.getElementById('modal-envelope').remove()">✕</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên khách *</label>
+          <input id="env-name" class="form-input" value="${env?.name||''}" placeholder="Nguyễn Văn A"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bên</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button type="button" id="env-groom" onclick="setEnvSide('groom')" style="padding:10px;border-radius:10px;border:2px solid ${env?.side==='groom'?'#60a5fa':'var(--border)'};background:${env?.side==='groom'?'rgba(96,165,250,.1)':'var(--surface2)'};color:${env?.side==='groom'?'#60a5fa':'var(--muted)'};font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">💙 Nhà trai</button>
+            <button type="button" id="env-bride" onclick="setEnvSide('bride')" style="padding:10px;border-radius:10px;border:2px solid ${env?.side==='bride'?'#f472b6':'var(--border)'};background:${env?.side==='bride'?'rgba(244,114,182,.1)':'var(--surface2)'};color:${env?.side==='bride'?'#f472b6':'var(--muted)'};font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">🩷 Nhà gái</button>
+          </div>
+          <input type="hidden" id="env-side" value="${env?.side||'groom'}"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dự kiến (đ)</label>
+            <input id="env-expected" type="number" class="form-input" value="${env?.amount_expected||''}" placeholder="500000"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Thực tế (đ)</label>
+            <input id="env-actual" type="number" class="form-input" value="${env?.amount_actual||''}" placeholder="Nhập sau tiệc"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú</label>
+          <input id="env-note" class="form-input" value="${env?.note||''}" placeholder="Quan hệ, địa chỉ..."/>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          ${env?`<button class="btn btn-danger btn-sm" onclick="deleteEnvelope('${env.id}','${eventId}')">🗑️ Xoá</button>`:''}
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-envelope').remove()">Huỷ</button>
+          <button class="btn btn-primary" onclick="saveEnvelope()">💾 Lưu</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function setEnvSide(side){
+  document.getElementById('env-side').value=side;
+  const gBtn=document.getElementById('env-groom');
+  const bBtn=document.getElementById('env-bride');
+  gBtn.style.borderColor=side==='groom'?'#60a5fa':'var(--border)';
+  gBtn.style.color=side==='groom'?'#60a5fa':'var(--muted)';
+  gBtn.style.background=side==='groom'?'rgba(96,165,250,.1)':'var(--surface2)';
+  bBtn.style.borderColor=side==='bride'?'#f472b6':'var(--border)';
+  bBtn.style.color=side==='bride'?'#f472b6':'var(--muted)';
+  bBtn.style.background=side==='bride'?'rgba(244,114,182,.1)':'var(--surface2)';
+}
+
+async function saveEnvelope(){
+  const name=document.getElementById('env-name').value.trim();
+  if(!name){alert('Vui lòng nhập tên khách.');return;}
+  const payload={
+    event_id:_envModal.eventId,
+    name,
+    side:document.getElementById('env-side').value||'groom',
+    amount_expected:parseInt(document.getElementById('env-expected').value)||null,
+    amount_actual:parseInt(document.getElementById('env-actual').value)||null,
+    note:document.getElementById('env-note').value.trim()||null,
+  };
+  let error;
+  if(_envModal.envId){
+    ({error}=await sb.from('envelopes').update(payload).eq('id',_envModal.envId));
+  } else {
+    ({error}=await sb.from('envelopes').insert(payload));
+  }
+  if(error){toast('Lỗi: '+error.message,'error');return;}
+  document.getElementById('modal-envelope').remove();
+  toast(_envModal.envId?'Đã cập nhật':'Đã thêm phong bì','success');
+  const ev=currentEvents.find(e=>e.id===_envModal.eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('envelopes');
+}
+
+async function deleteEnvelope(envId, eventId){
+  if(!confirm('Xoá phong bì này?')) return;
+  await sb.from('envelopes').delete().eq('id',envId);
+  document.getElementById('modal-envelope').remove();
+  toast('Đã xoá','info');
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('envelopes');
+}
+
+// ── Stats Page ────────────────────────────────────────────────────
 async function renderStats(){
   const el=document.getElementById('stats-content');
   el.innerHTML=`<div style="text-align:center;padding:40px"><div style="display:inline-flex;gap:6px"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div></div>`;
