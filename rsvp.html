@@ -122,6 +122,19 @@ textarea.fi{resize:vertical;min-height:72px}
         </button>
       </div>
 
+      <!-- Side selection (chỉ đám cưới) -->
+      <div class="fg" id="side-wrap" style="display:none">
+        <label class="fl">Bạn thuộc về?</label>
+        <div class="tog">
+          <button class="tog-btn" id="btn-groom" onclick="setSide('groom')">
+            <span class="em">💙</span>Nhà trai
+          </button>
+          <button class="tog-btn" id="btn-bride" onclick="setSide('bride')">
+            <span class="em">🩷</span>Nhà gái
+          </button>
+        </div>
+      </div>
+
       <div class="fg">
         <label class="fl">Họ tên *</label>
         <input id="g-name" class="fi" type="text" placeholder="Nguyễn Văn A" autocomplete="name"/>
@@ -165,7 +178,7 @@ const TYPES={
   birthday:{label:'Sinh nhật',emoji:'🎂',cls:'t-birthday'},
 };
 
-let sb, ev, attending=true, extra=0;
+let sb, ev, attending=true, extra=0, currentSide=null;
 
 function show(id){
   document.getElementById('screen-loading').style.display='none';
@@ -224,6 +237,10 @@ function render(e){
     d.style.display='block';
   }
 
+  // Hiện câu hỏi nhà trai/gái nếu là đám cưới
+  if(e.type==='wedding'){
+    document.getElementById('side-wrap').style.display='block';
+  }
   show('screen-form');
   setAttend(true);
 }
@@ -234,6 +251,28 @@ function setAttend(val){
   document.getElementById('btn-no').className='tog-btn'+(!val?' no':'');
   document.getElementById('extra-wrap').style.display=val?'block':'none';
   updateBtn();
+}
+
+function setSide(val){
+  currentSide=val;
+  document.getElementById('btn-groom').className='tog-btn'+(val==='groom'?' yes':'');
+  document.getElementById('btn-bride').className='tog-btn'+(val==='bride'?' yes':'');
+  // override colors for side
+  if(val==='groom'){
+    document.getElementById('btn-groom').style.borderColor='#60a5fa';
+    document.getElementById('btn-groom').style.color='#60a5fa';
+    document.getElementById('btn-groom').style.background='rgba(96,165,250,.1)';
+    document.getElementById('btn-bride').style.borderColor='';
+    document.getElementById('btn-bride').style.color='';
+    document.getElementById('btn-bride').style.background='';
+  } else {
+    document.getElementById('btn-bride').style.borderColor='#f472b6';
+    document.getElementById('btn-bride').style.color='#f472b6';
+    document.getElementById('btn-bride').style.background='rgba(244,114,182,.1)';
+    document.getElementById('btn-groom').style.borderColor='';
+    document.getElementById('btn-groom').style.color='';
+    document.getElementById('btn-groom').style.background='';
+  }
 }
 
 function chg(d){
@@ -259,6 +298,7 @@ async function submit(){
       phone:document.getElementById('g-phone').value.trim()||null,
       extra_count:attending?extra:0,
       attend:attending,
+      side:currentSide||null,
       note:document.getElementById('g-note').value.trim()||null,
     });
     if(error)throw error;
