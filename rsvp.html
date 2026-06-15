@@ -235,19 +235,21 @@ function render(e){
     d.style.display='block';
   }
 
-  // Load groups
-  const{data:groups}=await sb.from('envelope_groups').select('*').eq('event_id',e.id).order('sort_order');
-  if(groups&&groups.length){
-    const wrap=document.getElementById('group-wrap');
-    const btns=document.getElementById('group-buttons');
-    wrap.style.display='block';
-    btns.innerHTML=groups.map(g=>`
-      <button type="button" id="gbtn-${g.id}" onclick="selectGroup('${g.id}','${g.name.replace(/'/g,"\'")}')"
-        style="padding:10px 16px;border-radius:10px;border:2px solid var(--border);
-          background:rgba(255,255,255,.04);cursor:pointer;font-size:13px;font-weight:600;
-          color:var(--muted);font-family:inherit;transition:all .2s"
-        data-color="${g.color}">${g.name}</button>`).join('');
-  }
+  // Load groups (graceful - không crash nếu bảng chưa có)
+  try{
+    const{data:groups,error:grpErr}=await sb.from('envelope_groups').select('*').eq('event_id',e.id).order('sort_order');
+    if(!grpErr && groups && groups.length){
+      const wrap=document.getElementById('group-wrap');
+      const btns=document.getElementById('group-buttons');
+      wrap.style.display='block';
+      btns.innerHTML=groups.map(g=>`
+        <button type="button" id="gbtn-${g.id}" onclick="selectGroup('${g.id}','${g.name.replace(/'/g,"\'")}')"
+          style="padding:10px 16px;border-radius:10px;border:2px solid var(--border);
+            background:rgba(255,255,255,.04);cursor:pointer;font-size:13px;font-weight:600;
+            color:var(--muted);font-family:inherit;transition:all .2s"
+          data-color="${g.color}">${g.name}</button>`).join('');
+    }
+  }catch(e){ /* bảng chưa tồn tại - bỏ qua */ }
   show('screen-form');
   setAttend(true);
 }
