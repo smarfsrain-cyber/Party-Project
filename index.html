@@ -3,11 +3,47 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LễTiệc — Quản lý sự kiện & RSVP</title>
+<title>Event Party — Quản lý sự kiện & RSVP</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#c9a96e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Event Party"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230e0b08'/><text x='256' y='220' font-family='Georgia' font-size='140' fill='%23d4af7a' text-anchor='middle' font-weight='bold'>EP</text><text x='256' y='330' font-family='Georgia' font-size='56' fill='%23f0d9a0' text-anchor='middle'>Event Party</text></svg>"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ── Splash Screen ── */
+#splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0e0b08,#1a1208,#0b0c10);transition:opacity .5s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-logo{text-align:center;animation:splashIn .8s cubic-bezier(.34,1.56,.64,1)}
+@keyframes splashIn{from{opacity:0;transform:scale(.7) translateY(20px)}to{opacity:1;transform:none}}
+.splash-ep{font-family:'Playfair Display',serif;font-size:72px;font-weight:700;background:linear-gradient(135deg,#d4af7a,#f0d9a0,#c9a96e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:4px}
+.splash-name{font-family:'Playfair Display',serif;font-size:22px;color:#d4af7a;letter-spacing:3px;font-weight:400}
+.splash-sub{font-size:12px;color:rgba(201,169,110,.5);letter-spacing:2px;margin-top:8px;text-transform:uppercase}
+.splash-dots{display:flex;gap:6px;margin-top:32px}
+.splash-dot{width:6px;height:6px;border-radius:50%;background:#d4af7a;animation:pulse 1.2s ease infinite}
+.splash-dot:nth-child(2){animation-delay:.2s}.splash-dot:nth-child(3){animation-delay:.4s}
+
+/* ── PWA Install Banner ── */
+#pwa-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:linear-gradient(to top,rgba(14,11,8,.98),rgba(14,11,8,.9));border-top:1px solid rgba(212,175,122,.2);padding:16px 20px 20px;backdrop-filter:blur(12px)}
+#pwa-banner.show{display:block;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.pwa-inner{max-width:500px;margin:0 auto}
+.pwa-title{font-size:14px;font-weight:700;color:#f0d9a0;margin-bottom:4px}
+.pwa-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.pwa-steps{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.pwa-step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.pwa-step-num{width:20px;height:20px;border-radius:50%;background:var(--theme-glow);border:1px solid var(--theme-primary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--theme-primary);flex-shrink:0}
+.pwa-actions{display:flex;gap:8px}
+
+/* ── Logo SVG inline ── */
+.logo-svg{display:inline-flex;align-items:center;gap:8px}
+.logo-ep{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--theme-primary),var(--theme-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.logo-full{font-family:'Playfair Display',serif;font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;line-height:1;display:block;margin-top:2px}
+
 /* ── Reset & Base ── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -408,11 +444,38 @@ select.form-input option{background:var(--surface2)}
 </head>
 <body data-theme="wedding">
 
+<!-- Splash Screen -->
+<div id="splash">
+  <div class="splash-logo">
+    <div class="splash-ep">EP</div>
+    <div class="splash-name">Event Party</div>
+    <div class="splash-sub">Quản lý tiệc & RSVP</div>
+  </div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- PWA Install Banner -->
+<div id="pwa-banner">
+  <div class="pwa-inner">
+    <div class="pwa-title">📱 Cài Event Party lên điện thoại</div>
+    <div class="pwa-sub">Truy cập nhanh hơn, dùng như app thật sự — hoàn toàn miễn phí!</div>
+    <div class="pwa-steps" id="pwa-steps"></div>
+    <div class="pwa-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="hidePWABanner(true)" id="pwa-install-btn">📲 Cài ngay</button>
+      <button class="btn btn-secondary" onclick="hidePWABanner(false)">Để sau</button>
+    </div>
+  </div>
+</div>
+
 <!-- Auth Screen -->
 <div id="auth-screen" class="auth-wrap">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="big">🎊 LễTiệc</div>
+      <div class="big" style="font-family:'Playfair Display',serif;background:linear-gradient(135deg,#d4af7a,#f0d9a0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Event Party</div>
       <div class="sub">Hệ thống quản lý tiệc & RSVP chuyên nghiệp</div>
     </div>
     <div class="auth-tabs">
@@ -494,6 +557,7 @@ select.form-input option{background:var(--surface2)}
       <div class="flex items-center gap-12">
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
         <div id="topbar-title" class="topbar-title">Sự kiện của tôi</div>
+        <div class="logo-ep" style="font-size:16px;display:none" id="mobile-logo">EP</div>
       </div>
       <div class="topbar-actions" id="topbar-actions">
         <button class="btn btn-primary" onclick="openCreateModal()">
@@ -714,7 +778,127 @@ let editingEventId = null;
 let uploadedImageUrl = '';
 let realtimeChannel = null;
 
-// ── Auth ──────────────────────────────────────────────────────
+// ── Splash ───────────────────────────────────────────────────
+function hideSplash(){
+  const s=document.getElementById('splash');
+  if(s){s.classList.add('hide');setTimeout(()=>s.remove(),600);}
+}
+setTimeout(hideSplash, 2000);
+
+// ── PWA Install ───────────────────────────────────────────────
+let deferredPrompt=null;
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+const isAndroid=/Android/.test(navigator.userAgent);
+const isInStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  if(!isInStandalone && !localStorage.getItem('pwa-dismissed')){
+    setTimeout(showPWABanner, 3000);
+  }
+});
+
+function showPWABanner(){
+  const banner=document.getElementById('pwa-banner');
+  const steps=document.getElementById('pwa-steps');
+  if(!banner||!steps) return;
+  if(isIOS){
+    steps.innerHTML=`
+      <div class="pwa-step"><div class="pwa-step-num">1</div><span>Bấm nút <b style="color:var(--theme-primary)">Chia sẻ</b> ở thanh dưới trình duyệt Safari <b>⬆️</b></span></div>
+      <div class="pwa-step"><div class="pwa-step-num">2</div><span>Chọn <b style="color:var(--theme-primary)">"Thêm vào Màn hình chính"</b> (Add to Home Screen)</span></div>
+      <div class="pwa-step"><div class="pwa-step-num">3</div><span>Bấm <b style="color:var(--theme-primary)">Thêm</b> — icon Event Party xuất hiện trên màn hình!</span></div>`;
+    document.getElementById('pwa-install-btn').textContent='✅ Đã hiểu';
+    document.getElementById('pwa-install-btn').onclick=()=>hidePWABanner(true);
+  } else {
+    steps.innerHTML=`
+      <div class="pwa-step"><div class="pwa-step-num">1</div><span>Bấm <b style="color:var(--theme-primary)">"Cài ngay"</b> bên dưới</span></div>
+      <div class="pwa-step"><div class="pwa-step-num">2</div><span>Trình duyệt hỏi xác nhận — bấm <b style="color:var(--theme-primary)">Cài đặt</b></span></div>
+      <div class="pwa-step"><div class="pwa-step-num">3</div><span>Icon <b style="color:var(--theme-primary)">Event Party</b> xuất hiện trên màn hình điện thoại!</span></div>`;
+  }
+  banner.classList.add('show');
+}
+
+async function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const{outcome}=await deferredPrompt.userChoice;
+    deferredPrompt=null;
+    hidePWABanner(true);
+    if(outcome==='accepted') toast('🎉 Đã cài Event Party!','success');
+  }
+}
+
+function hidePWABanner(permanent){
+  document.getElementById('pwa-banner').classList.remove('show');
+  if(permanent) localStorage.setItem('pwa-dismissed','1');
+}
+
+// Gán lại nút cài ngay cho Android
+document.addEventListener('DOMContentLoaded',()=>{
+  const btn=document.getElementById('pwa-install-btn');
+  if(btn&&!isIOS) btn.onclick=installPWA;
+  // Show PWA hint nếu iOS (không có beforeinstallprompt)
+  if(isIOS && !isInStandalone && !localStorage.getItem('pwa-dismissed')){
+    setTimeout(showPWABanner, 3000);
+  }
+});
+
+// ── Format tiền VND ───────────────────────────────────────────
+function formatVNDInput(input){
+  const raw=input.value.replace(/[^0-9]/g,'');
+  input.value=raw?parseInt(raw).toLocaleString('vi-VN'):'';
+  input.dataset.raw=raw||'0';
+}
+function getVNDValue(input){
+  return parseInt((input.dataset.raw||input.value.replace(/[^0-9]/g,''))||'0')||0;
+}
+function setVNDValue(input, val){
+  input.dataset.raw=val||'0';
+  input.value=val?parseInt(val).toLocaleString('vi-VN'):'';
+}
+
+// ── Nhóm tiền mừng mặc định theo loại tiệc ───────────────────
+const DEFAULT_GROUPS={
+  wedding:[
+    {name:'💙 Nhà trai',color:'#60a5fa'},
+    {name:'🩷 Nhà gái',color:'#f472b6'},
+  ],
+  thoi_noi:[
+    {name:'👨‍👩‍👧 Gia đình',color:'#34d399'},
+    {name:'👫 Bạn bè',color:'#60a5fa'},
+    {name:'💼 Đồng nghiệp',color:'#a78bfa'},
+    {name:'🏠 Hàng xóm',color:'#fb923c'},
+  ],
+  day_thang:[
+    {name:'👨‍👩‍👧 Gia đình',color:'#34d399'},
+    {name:'👫 Bạn bè',color:'#f472b6'},
+    {name:'💼 Đồng nghiệp',color:'#a78bfa'},
+    {name:'🏠 Hàng xóm',color:'#fb923c'},
+  ],
+  dam_gio:[
+    {name:'👨‍👩‍👧 Gia đình',color:'#34d399'},
+    {name:'🤝 Họ hàng',color:'#60a5fa'},
+    {name:'🏠 Hàng xóm',color:'#fb923c'},
+    {name:'👫 Bạn bè',color:'#a78bfa'},
+  ],
+  birthday:[
+    {name:'👨‍👩‍👧 Gia đình',color:'#34d399'},
+    {name:'💛 Bạn thân',color:'#fbbf24'},
+    {name:'📚 Bạn học',color:'#60a5fa'},
+    {name:'💼 Đồng nghiệp',color:'#a78bfa'},
+  ],
+};
+
+const ENVELOPE_TAB_NAME={
+  wedding:'💌 Phong bì',
+  thoi_noi:'🧧 Tiền mừng',
+  day_thang:'🧧 Tiền mừng',
+  dam_gio:'🙏 Công đức',
+  birthday:'🎁 Tiền mừng',
+};
+
+// ── Auth ──────────────────────────────────────────────────────────
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -900,12 +1084,21 @@ async function renderDetail(ev){
   const shareUrl=`${RSVP_BASE}?event=${ev.id}`;
 
   // Load expenses + envelopes song song
-  const[{data:expData},{data:envData}]=await Promise.all([
+  const[{data:expData},{data:envData},{data:grpData}]=await Promise.all([
     sb.from('expenses').select('*').eq('event_id',ev.id).order('created_at'),
-    ev.type==='wedding'?sb.from('envelopes').select('*').eq('event_id',ev.id).order('created_at'):Promise.resolve({data:[]}),
+    sb.from('envelopes').select('*').eq('event_id',ev.id).order('created_at'),
+    sb.from('envelope_groups').select('*').eq('event_id',ev.id).order('sort_order'),
   ]);
   const expenses=expData||[];
   const envelopes=envData||[];
+  const groups=grpData||[];
+  // Tạo nhóm mặc định nếu chưa có
+  if(!groups.length){
+    const defaults=DEFAULT_GROUPS[ev.type]||DEFAULT_GROUPS.thoi_noi;
+    const inserts=defaults.map((g,i)=>({event_id:ev.id,name:g.name,color:g.color,sort_order:i}));
+    const{data:newGroups}=await sb.from('envelope_groups').insert(inserts).select();
+    groups.push(...(newGroups||[]));
+  }
 
   document.getElementById('detail-content').innerHTML=`
     <!-- Hero banner -->
@@ -983,7 +1176,7 @@ async function renderDetail(ev){
     <div class="detail-tabs">
       <button class="detail-tab active" data-tab="guests" onclick="switchDetailTab('guests')">👥 Khách (${gList.length})</button>
       <button class="detail-tab" data-tab="expenses" onclick="switchDetailTab('expenses')">💰 Chi phí</button>
-      ${ev.type==='wedding'?`<button class="detail-tab" data-tab="envelopes" onclick="switchDetailTab('envelopes')">💌 Phong bì</button>`:''}
+      <button class="detail-tab" data-tab="envelopes" onclick="switchDetailTab('envelopes')">${ENVELOPE_TAB_NAME[ev.type]||'🧧 Tiền mừng'}</button>
     </div>
 
     <!-- Tab: Khách -->
@@ -1003,17 +1196,19 @@ async function renderDetail(ev){
       ${renderExpensesHTML(ev, expenses, totalPax, tables)}
     </div>
 
-    ${ev.type==='wedding'?`
-    <!-- Tab: Phong bì -->
+    <!-- Tab: Tiền mừng -->
     <div class="detail-tab-content" id="tab-envelopes">
-      ${renderEnvelopesHTML(ev, envelopes, expenses)}
-    </div>`:''}
+      ${renderEnvelopesHTML(ev, envelopes, expenses, groups)}
+    </div>
   `;
 
   // Store gList globally for filtering
   window._currentGuests = gList;
   window._envAll = envelopes||[];
   window._currentExpenses = expenses||[];
+  window._currentGroups = groups||[];
+  window._currentEventId = ev.id;
+  window._currentEventType = ev.type;
   // responsive handled by CSS
 }
 
@@ -1074,13 +1269,21 @@ function renderExpensesHTML(ev, expenses, totalPax, tables){
 
   return`<div class="card" style="margin-bottom:16px">
     <!-- Budget -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:13px;font-weight:600;color:var(--theme-primary)">💰 Ngân sách dự kiến</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="number" id="budget-input" value="${budget||''}" placeholder="0"
-          style="width:140px;padding:6px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;outline:none;text-align:right"/>
-        <span style="font-size:12px;color:var(--muted)">đ</span>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--theme-primary);margin-bottom:10px">💰 Ngân sách dự kiến</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${[500000,1000000,2000000,5000000,10000000,20000000,50000000].map(v=>`<button class="quick-chip" onclick="setBudgetChip(${v})">${v>=1000000?v/1000000+'M':v/1000+'K'}</button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="text" id="budget-input" value="${budget?parseInt(budget).toLocaleString('vi-VN'):''}" placeholder="Nhập ngân sách..."
+          oninput="formatVNDInput(this);updateBudgetPreview()"
+          data-raw="${budget||0}"
+          style="flex:1;min-width:140px;padding:8px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:inherit;outline:none;text-align:right"/>
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">VNĐ</span>
         <button class="btn btn-secondary btn-sm" onclick="saveBudget('${ev.id}')">Lưu</button>
+      </div>
+      <div id="budget-preview" style="font-size:12px;color:var(--theme-primary);margin-top:6px;min-height:16px">
+        ${budget?fmtVND(budget):''}
       </div>
     </div>
     ${budget?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Đã dùng: <b style="color:${pct>100?'#f87171':'var(--theme-primary)'}">${fmtVND(totalExp)}</b> / ${fmtVND(budget)} (${pct}%)</div>
@@ -1102,6 +1305,36 @@ function renderExpensesHTML(ev, expenses, totalPax, tables){
       <button class="quick-chip" style="border-color:var(--theme-primary);color:var(--theme-primary)" onclick="openExpenseModal('${ev.id}',null,${tables},${totalPax})">＋ Tuỳ chỉnh</button>
     </div>
   </div>
+
+  <!-- Hướng dẫn -->
+  <details style="margin-bottom:16px">
+    <summary style="cursor:pointer;font-size:13px;color:var(--theme-primary);font-weight:600;padding:10px 14px;background:var(--surface2);border-radius:10px;list-style:none;display:flex;align-items:center;gap:8px">
+      <span>📖</span> Hướng dẫn lập ngân sách
+      <span style="margin-left:auto;color:var(--muted);font-size:11px">▼ Xem</span>
+    </summary>
+    <div style="background:var(--surface2);border-radius:0 0 10px 10px;padding:14px;margin-top:2px;font-size:13px;color:var(--muted);line-height:1.7">
+      <div style="margin-bottom:10px"><b style="color:var(--text)">📂 Danh mục chi phí:</b><br/>
+        🍽️ <b>Thực đơn</b> — Chi phí ăn uống mỗi bàn hoặc mỗi người<br/>
+        🌸 <b>Trang trí</b> — Hoa, bóng bay, phông nền, đèn<br/>
+        🎵 <b>Âm nhạc</b> — Ban nhạc, DJ, MC, âm thanh ánh sáng<br/>
+        📷 <b>Ảnh/Video</b> — Chụp ảnh, quay phim, album<br/>
+        🚗 <b>Di chuyển</b> — Xe hoa, đưa đón khách<br/>
+        🏛️ <b>Địa điểm</b> — Thuê phòng, nhà hàng, sảnh tiệc<br/>
+        🎁 <b>Quà tặng</b> — Quà cho khách, favors<br/>
+        📦 <b>Khác</b> — Trang điểm, thiệp mời, in ấn...
+      </div>
+      <div style="margin-bottom:10px"><b style="color:var(--text)">🔗 Số lượng tự động:</b><br/>
+        Chọn "Theo số bàn" hoặc "Theo số khách" — hệ thống tự cập nhật thành tiền khi có thêm khách xác nhận.
+      </div>
+      <div style="margin-bottom:10px"><b style="color:var(--text)">💡 Ngân sách tham khảo:</b><br/>
+        💍 Đám cưới 100 khách: ~80–150 triệu<br/>
+        🍼 Thôi nôi 50 khách: ~15–30 triệu<br/>
+        🎂 Sinh nhật 30 khách: ~5–15 triệu<br/>
+        🕯️ Đám giỗ 40 khách: ~10–20 triệu
+      </div>
+      <div><b style="color:var(--text)">✅ Mẹo:</b> Nhập ngân sách dự kiến trước, sau đó thêm từng khoản chi — thanh tiến độ sẽ hiện bạn đang dùng bao nhiêu %.</div>
+    </div>
+  </details>
 
   <!-- Expense list -->
   <div class="card" style="padding:0;overflow:hidden">
@@ -1134,61 +1367,123 @@ function renderExpensesHTML(ev, expenses, totalPax, tables){
 }
 
 // ── ENVELOPE HELPERS ──────────────────────────────────────────
-function renderEnvelopesHTML(ev, envelopes, expenses){
-  const groomList=envelopes.filter(e=>e.side==='groom');
-  const brideList=envelopes.filter(e=>e.side==='bride');
+function renderEnvelopesHTML(ev, envelopes, expenses, groups){
   const totalActual=envelopes.reduce((s,e)=>s+(e.amount_actual||0),0);
-  const groomActual=groomList.reduce((s,e)=>s+(e.amount_actual||0),0);
-  const brideActual=brideList.reduce((s,e)=>s+(e.amount_actual||0),0);
   const totalExp2=expenses?expenses.reduce((s,e)=>s+calcExpAmt(e,0,0),0):0;
   const balance=totalActual-totalExp2;
 
-  return`<!-- Summary -->
-  <div class="sum-grid" style="margin-bottom:16px">
-    <div class="sum-card"><div class="sum-val" style="color:#60a5fa">${fmtVND(groomActual)}</div><div class="sum-label">💙 Nhà trai</div></div>
-    <div class="sum-card"><div class="sum-val" style="color:#f472b6">${fmtVND(brideActual)}</div><div class="sum-label">🩷 Nhà gái</div></div>
-    <div class="sum-card"><div class="sum-val">${fmtVND(totalActual)}</div><div class="sum-label">Tổng thu</div></div>
+  // Stats per group
+  const groupStats=groups.map(g=>{
+    const list=envelopes.filter(e=>e.group_id===g.id);
+    return{...g,count:list.length,total:list.reduce((s,e)=>s+(e.amount_actual||0),0)};
+  });
+
+  return`<!-- Summary tổng -->
+  <div class="sum-grid" style="margin-bottom:12px">
+    <div class="sum-card"><div class="sum-val">${fmtVND(totalActual)}</div><div class="sum-label">💰 Tổng thu</div></div>
     <div class="sum-card"><div class="sum-val" style="color:${balance>=0?'#34d399':'#f87171'}">${balance>=0?'+':''}${fmtVND(balance)}</div><div class="sum-label">${balance>=0?'✅ Lãi':'❌ Lỗ'}</div></div>
+    <div class="sum-card"><div class="sum-val">${envelopes.length}</div><div class="sum-label">👥 Số người</div></div>
+    <div class="sum-card"><div class="sum-val">${envelopes.filter(e=>!e.amount_actual).length}</div><div class="sum-label">⏳ Chưa nhập</div></div>
   </div>
 
+  <!-- Stats per group -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    ${groupStats.map(g=>`<div style="background:${g.color}22;border:1px solid ${g.color}44;border-radius:10px;padding:8px 12px;min-width:120px">
+      <div style="font-size:11px;color:${g.color};font-weight:600">${g.name}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${fmtVND(g.total)}</div>
+      <div style="font-size:11px;color:var(--muted)">${g.count} người</div>
+    </div>`).join('')}
+  </div>
+
+  <!-- Quản lý nhóm -->
+  <details style="margin-bottom:16px">
+    <summary style="cursor:pointer;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--surface2);border-radius:8px;list-style:none;display:flex;align-items:center;gap:6px">
+      ⚙️ Quản lý nhóm (${groups.length}) <span style="margin-left:auto">▼</span>
+    </summary>
+    <div style="background:var(--surface2);border-radius:0 0 8px 8px;padding:12px;margin-top:2px">
+      <div id="group-list-manage" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        ${groups.map(g=>`<div style="display:flex;align-items:center;gap:6px;background:${g.color}22;border:1px solid ${g.color}44;border-radius:20px;padding:4px 10px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${g.color};flex-shrink:0"></div>
+          <span style="font-size:12px;color:var(--text)">${g.name}</span>
+          <button onclick="deleteGroup('${g.id}','${ev.id}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input id="new-group-name" class="form-input" placeholder="Tên nhóm mới..." style="flex:1;min-width:120px;padding:6px 10px;font-size:13px"/>
+        <input id="new-group-color" type="color" value="#c9a96e" style="width:36px;height:34px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;padding:2px"/>
+        <button class="btn btn-secondary btn-sm" onclick="addGroup('${ev.id}')">＋ Thêm nhóm</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Filter + Add -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div class="env-filter-tabs">
       <button class="env-ftab active" onclick="filterEnv(this,'all')">Tất cả (${envelopes.length})</button>
-      <button class="env-ftab" onclick="filterEnv(this,'groom')">💙 Nhà trai (${groomList.length})</button>
-      <button class="env-ftab" onclick="filterEnv(this,'bride')">🩷 Nhà gái (${brideList.length})</button>
+      ${groups.map(g=>`<button class="env-ftab" onclick="filterEnv(this,'${g.id}')" style="--ftab-color:${g.color}">${g.name} (${envelopes.filter(e=>e.group_id===g.id).length})</button>`).join('')}
       <button class="env-ftab" onclick="filterEnv(this,'missing')">⏳ Chưa nhập</button>
     </div>
     <button class="btn btn-primary btn-sm" onclick="openEnvModal('${ev.id}',null)">＋ Thêm</button>
   </div>
 
   <div id="env-list">
-    ${renderEnvList(envelopes,'all')}
+    ${renderEnvList(envelopes,'all',groups)}
   </div>`;
 }
 
-function renderEnvList(list, filter){
+function renderEnvList(list, filter, groups){
+  const grps=groups||window._currentGroups||[];
   let filtered=list;
-  if(filter==='groom') filtered=list.filter(e=>e.side==='groom');
-  else if(filter==='bride') filtered=list.filter(e=>e.side==='bride');
-  else if(filter==='missing') filtered=list.filter(e=>!e.amount_actual);
+  if(filter==='missing') filtered=list.filter(e=>!e.amount_actual);
+  else if(filter!=='all') filtered=list.filter(e=>e.group_id===filter);
   if(!filtered.length) return`<div style="text-align:center;padding:32px;color:var(--muted);font-size:14px">Chưa có dữ liệu</div>`;
-  return filtered.map(e=>`
-    <div class="env-item">
-      <div class="side-dot ${e.side}"></div>
-      <div class="env-name">${e.name}${e.note?`<div style="font-size:11px;color:var(--muted)">${e.note}</div>`:''}</div>
+  return filtered.map(e=>{
+    const grp=grps.find(g=>g.id===e.group_id);
+    const color=grp?.color||'#888';
+    return`<div class="env-item">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+      <div class="env-name">
+        ${e.name}
+        ${grp?`<span style="font-size:10px;color:${color};margin-left:6px">${grp.name}</span>`:''}
+        ${e.note?`<div style="font-size:11px;color:var(--muted)">${e.note}</div>`:''}
+      </div>
       <div class="env-amounts">
-        ${e.amount_expected?`<span class="env-amt expected">Dự kiến: ${fmtVND(e.amount_expected)}</span>`:''}
+        ${e.amount_expected?`<span class="env-amt expected">DK: ${fmtVND(e.amount_expected)}</span>`:''}
         <span class="env-amt actual">${e.amount_actual?fmtVND(e.amount_actual):'⏳ Chưa nhập'}</span>
       </div>
       <button class="btn-ghost" style="font-size:15px;padding:4px 8px" onclick="openEnvModal('${e.event_id}','${e.id}')">✏️</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 window._envAll=[];
 function filterEnv(el, filter){
   document.querySelectorAll('.env-ftab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('env-list').innerHTML=renderEnvList(window._envAll,filter);
+  document.getElementById('env-list').innerHTML=renderEnvList(window._envAll,filter,window._currentGroups);
+}
+
+async function addGroup(eventId){
+  const name=document.getElementById('new-group-name').value.trim();
+  if(!name){toast('Nhập tên nhóm','error');return;}
+  const color=document.getElementById('new-group-color').value;
+  const order=(window._currentGroups||[]).length;
+  const{data,error}=await sb.from('envelope_groups').insert({event_id:eventId,name,color,sort_order:order}).select().single();
+  if(error){toast('Lỗi: '+error.message,'error');return;}
+  window._currentGroups=[...(window._currentGroups||[]),data];
+  toast('Đã thêm nhóm '+name,'success');
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('envelopes');
+}
+
+async function deleteGroup(groupId, eventId){
+  if(!confirm('Xoá nhóm này? Các thành viên trong nhóm sẽ mất phân loại.')) return;
+  await sb.from('envelope_groups').delete().eq('id',groupId);
+  toast('Đã xoá nhóm','info');
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev) await renderDetail(ev);
+  switchDetailTab('envelopes');
 }
 
 function filterGuests(){
@@ -1518,11 +1813,13 @@ let _envModal={eventId:null,envId:null};
 function openEnvModal(eventId, envId){
   _envModal={eventId,envId};
   const env=envId?window._envAll?.find(e=>e.id===envId):null;
+  const groups=window._currentGroups||[];
+  const chips=[200000,300000,500000,1000000,2000000,3000000,5000000];
   const html=`
     <div class="modal-overlay open" id="modal-envelope">
       <div class="modal-box">
         <div class="modal-header">
-          <div class="modal-title">${env?'Sửa phong bì':'Thêm phong bì'}</div>
+          <div class="modal-title">${env?'Sửa tiền mừng':'Thêm tiền mừng'}</div>
           <button class="modal-close" onclick="document.getElementById('modal-envelope').remove()">✕</button>
         </div>
         <div class="form-group">
@@ -1530,22 +1827,38 @@ function openEnvModal(eventId, envId){
           <input id="env-name" class="form-input" value="${env?.name||''}" placeholder="Nguyễn Văn A"/>
         </div>
         <div class="form-group">
-          <label class="form-label">Bên</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button type="button" id="env-groom" onclick="setEnvSide('groom')" style="padding:10px;border-radius:10px;border:2px solid ${env?.side==='groom'?'#60a5fa':'var(--border)'};background:${env?.side==='groom'?'rgba(96,165,250,.1)':'var(--surface2)'};color:${env?.side==='groom'?'#60a5fa':'var(--muted)'};font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">💙 Nhà trai</button>
-            <button type="button" id="env-bride" onclick="setEnvSide('bride')" style="padding:10px;border-radius:10px;border:2px solid ${env?.side==='bride'?'#f472b6':'var(--border)'};background:${env?.side==='bride'?'rgba(244,114,182,.1)':'var(--surface2)'};color:${env?.side==='bride'?'#f472b6':'var(--muted)'};font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">🩷 Nhà gái</button>
+          <label class="form-label">Nhóm *</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="env-group-btns">
+            ${groups.map(g=>`<button type="button" class="quick-chip" id="grpbtn-${g.id}"
+              onclick="setEnvGroup('${g.id}')"
+              style="border-color:${env?.group_id===g.id?g.color:'var(--border)'};color:${env?.group_id===g.id?g.color:'var(--muted)'};background:${env?.group_id===g.id?g.color+'22':'var(--surface2)'}">
+              ${g.name}</button>`).join('')}
           </div>
-          <input type="hidden" id="env-side" value="${env?.side||'groom'}"/>
+          <input type="hidden" id="env-group-id" value="${env?.group_id||groups[0]?.id||''}"/>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Dự kiến (đ)</label>
-            <input id="env-expected" type="number" class="form-input" value="${env?.amount_expected||''}" placeholder="500000"/>
+        <div class="form-group">
+          <label class="form-label">Tiền mừng dự kiến</label>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
+            ${chips.map(v=>`<button class="quick-chip" onclick="setEnvChip('env-expected-input',${v})" style="font-size:11px;padding:3px 8px">${v>=1000000?v/1000000+'M':v/1000+'K'}</button>`).join('')}
           </div>
-          <div class="form-group">
-            <label class="form-label">Thực tế (đ)</label>
-            <input id="env-actual" type="number" class="form-input" value="${env?.amount_actual||''}" placeholder="Nhập sau tiệc"/>
+          <input id="env-expected-input" type="text" class="form-input" 
+            value="${env?.amount_expected?parseInt(env.amount_expected).toLocaleString('vi-VN'):''}"
+            data-raw="${env?.amount_expected||0}"
+            oninput="formatVNDInput(this)"
+            placeholder="Nhập số tiền..."/>
+          <div id="env-exp-preview" style="font-size:12px;color:var(--theme-primary);margin-top:4px">${env?.amount_expected?fmtVND(env.amount_expected):''}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tiền mừng thực tế <span style="color:var(--muted);font-weight:400">(nhập sau tiệc)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
+            ${chips.map(v=>`<button class="quick-chip" onclick="setEnvChip('env-actual-input',${v})" style="font-size:11px;padding:3px 8px">${v>=1000000?v/1000000+'M':v/1000+'K'}</button>`).join('')}
           </div>
+          <input id="env-actual-input" type="text" class="form-input"
+            value="${env?.amount_actual?parseInt(env.amount_actual).toLocaleString('vi-VN'):''}"
+            data-raw="${env?.amount_actual||0}"
+            oninput="formatVNDInput(this)"
+            placeholder="Nhập sau tiệc..."/>
+          <div id="env-act-preview" style="font-size:12px;color:var(--theme-primary);margin-top:4px">${env?.amount_actual?fmtVND(env.amount_actual):''}</div>
         </div>
         <div class="form-group">
           <label class="form-label">Ghi chú</label>
@@ -1559,29 +1872,43 @@ function openEnvModal(eventId, envId){
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend',html);
+  // Set default group
+  if(!env && groups[0]) setEnvGroup(groups[0].id);
 }
 
-function setEnvSide(side){
-  document.getElementById('env-side').value=side;
-  const gBtn=document.getElementById('env-groom');
-  const bBtn=document.getElementById('env-bride');
-  gBtn.style.borderColor=side==='groom'?'#60a5fa':'var(--border)';
-  gBtn.style.color=side==='groom'?'#60a5fa':'var(--muted)';
-  gBtn.style.background=side==='groom'?'rgba(96,165,250,.1)':'var(--surface2)';
-  bBtn.style.borderColor=side==='bride'?'#f472b6':'var(--border)';
-  bBtn.style.color=side==='bride'?'#f472b6':'var(--muted)';
-  bBtn.style.background=side==='bride'?'rgba(244,114,182,.1)':'var(--surface2)';
+function setEnvGroup(groupId){
+  document.getElementById('env-group-id').value=groupId;
+  const groups=window._currentGroups||[];
+  document.querySelectorAll('[id^="grpbtn-"]').forEach(btn=>{
+    const gid=btn.id.replace('grpbtn-','');
+    const g=groups.find(x=>x.id===gid);
+    if(!g) return;
+    const active=gid===groupId;
+    btn.style.borderColor=active?g.color:'var(--border)';
+    btn.style.color=active?g.color:'var(--muted)';
+    btn.style.background=active?g.color+'22':'var(--surface2)';
+  });
+}
+
+function setEnvChip(inputId, val){
+  const inp=document.getElementById(inputId);
+  if(!inp) return;
+  inp.dataset.raw=val;
+  inp.value=parseInt(val).toLocaleString('vi-VN');
 }
 
 async function saveEnvelope(){
   const name=document.getElementById('env-name').value.trim();
   if(!name){alert('Vui lòng nhập tên khách.');return;}
+  const groupId=document.getElementById('env-group-id').value||null;
+  const grp=(window._currentGroups||[]).find(g=>g.id===groupId);
   const payload={
     event_id:_envModal.eventId,
     name,
-    side:document.getElementById('env-side').value||'groom',
-    amount_expected:parseInt(document.getElementById('env-expected').value)||null,
-    amount_actual:parseInt(document.getElementById('env-actual').value)||null,
+    group_id:groupId||null,
+    group_name:grp?.name||null,
+    amount_expected:getVNDValue(document.getElementById('env-expected-input'))||null,
+    amount_actual:getVNDValue(document.getElementById('env-actual-input'))||null,
     note:document.getElementById('env-note').value.trim()||null,
   };
   let error;
@@ -1606,6 +1933,32 @@ async function deleteEnvelope(envId, eventId){
   const ev=currentEvents.find(e=>e.id===eventId);
   if(ev) await renderDetail(ev);
   switchDetailTab('envelopes');
+}
+
+function setBudgetChip(val){
+  const inp=document.getElementById('budget-input');
+  if(!inp) return;
+  inp.dataset.raw=val;
+  inp.value=parseInt(val).toLocaleString('vi-VN');
+  updateBudgetPreview();
+}
+function updateBudgetPreview(){
+  const inp=document.getElementById('budget-input');
+  const prev=document.getElementById('budget-preview');
+  if(!inp||!prev) return;
+  const val=getVNDValue(inp);
+  prev.textContent=val?fmtVND(val):'';
+}
+async function saveBudget(eventId){
+  const inp=document.getElementById('budget-input');
+  const val=getVNDValue(inp)||null;
+  const{error}=await sb.from('events').update({budget:val}).eq('id',eventId);
+  if(error){toast('Lỗi: '+error.message,'error');return;}
+  const ev=currentEvents.find(e=>e.id===eventId);
+  if(ev){ev.budget=val;}
+  toast('Đã lưu ngân sách '+fmtVND(val),'success');
+  await renderDetail(ev);
+  switchDetailTab('expenses');
 }
 
 // ── Stats Page ────────────────────────────────────────────────────
@@ -1667,6 +2020,10 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o) o.classList.remove('open')});
 });
 
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 // Init
 init();
 </script>
